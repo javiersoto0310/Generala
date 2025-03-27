@@ -1,0 +1,17 @@
+# Ignorar entornos virtuales
+.venv/
+
+# Ignorar configuraciones locales de IDE
+.idea/
+*.pyc
+__pycache__/
+
+# Ignorar dependencias descargadas
+node_modules/
+
+# Ignorar archivos grandes o binarios
+*.so
+*.dll
+*.exe
+*.log
+

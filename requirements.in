@@ -1,0 +1,5 @@
+eventlet
+python-socketio
+websocket-client
+pyside6
+pytest
