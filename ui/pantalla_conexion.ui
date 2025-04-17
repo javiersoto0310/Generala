@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>ConexionEnRed</class>
+ <class>MainWindow</class>
  <widget class="QMainWindow" name="MainWindow">
   <property name="geometry">
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>400</width>
-    <height>300</height>
+    <width>408</width>
+    <height>331</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -53,6 +53,13 @@
       </property>
      </widget>
     </item>
+    <item>
+     <widget class="QPushButton" name="btn_ranking">
+      <property name="text">
+       <string>Ranking</string>
+      </property>
+     </widget>
+    </item>
    </layout>
   </widget>
   <widget class="QMenuBar" name="menubar">
@@ -60,8 +67,8 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>400</width>
-     <height>20</height>
+     <width>408</width>
+     <height>22</height>
     </rect>
    </property>
   </widget>

@@ -26,7 +26,7 @@ class Categoria:
             if 5 in valores and ha_marcado_generala:
                 return 100
             else:
-                return 0  # Asignar 0 si no ha marcado Generala previamente
+                return 0
         else:
             raise ValueError(f"Categoría desconocida: {categoria}")
 

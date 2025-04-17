@@ -42,6 +42,6 @@ class Turno:
         if categoria:
             puntaje.registrar_puntos(self.__jugador_actual, 0, categoria)
             logging.info(f"Tiempo agotado. Asignados 0 puntos a {categoria} para {self.__jugador_actual}.")
-            actualizar_tabla_puntajes()  # Actualizar la tabla de puntajes
+            actualizar_tabla_puntajes()
         else:
             logging.info(f"Tiempo agotado. Todas las categorías están completadas para {self.__jugador_actual}.")

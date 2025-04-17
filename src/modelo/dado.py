@@ -13,3 +13,7 @@ class Dado:
 
     def reiniciar(self):
         self.__valor = None
+
+    def establecer_valor(self, valor):
+        if 1 <= valor <= 6:
+            self.__valor = valor

@@ -7,10 +7,11 @@ class Puntaje:
         "Doble Generala", "Generala", "Póker", "Full", "Escalera", "6", "5", "4", "3", "2", "1"
     ]
 
-    def __init__(self, nombres_jugadores: list):
+    def __init__(self, nombres_jugadores: list, cliente):
         self.__jugadores = [Jugador(nombre) for nombre in nombres_jugadores]
         self.__puntajes_por_categoria = {jugador.obtener_nombre(): {} for jugador in self.__jugadores}
         self.__categorias_usadas = {jugador.obtener_nombre(): set() for jugador in self.__jugadores}
+        self.cliente = cliente
 
     def registrar_puntos(self, nombre_jugador: str, puntos: int, categoria: str):
         jugador = self._obtener_jugador_por_nombre(nombre_jugador)
@@ -22,6 +23,7 @@ class Puntaje:
             self.__categorias_usadas[nombre_jugador].add(categoria)
             jugador.actualizar_puntaje(puntos)
             self.__puntajes_por_categoria[nombre_jugador][categoria] = puntos
+            self.cliente.emit('actualizar_puntajes', {'puntajes': self.obtener_puntajes()})
         else:
             raise ValueError(f"Categoría {categoria} ya utilizada por {nombre_jugador}")
 
@@ -49,3 +51,14 @@ class Puntaje:
             if jugador.obtener_nombre() == nombre:
                 return jugador
         raise ValueError(f"Jugador {nombre} no existe")
+
+    def cargar_desde_dict(self, datos):
+        self.__puntajes_por_categoria = datos
+        self.__jugadores = []
+        self.__categorias_usadas = {}
+        for nombre_jugador, puntajes_categoria in datos.items():
+            self.__jugadores.append(Jugador(nombre_jugador, sum(puntajes_categoria.values())))
+            self.__categorias_usadas[nombre_jugador] = set(puntajes_categoria.keys())
+
+    def obtener_puntajes(self):
+        return self.__puntajes_por_categoria
