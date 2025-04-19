@@ -16,7 +16,7 @@ def crear_sala(sid, data):
     nombre = data.get('nombre', 'Anónimo')
     sala_id = f"sala_{len(salas) + 1}"
     jugador = Jugador(nombre)
-    salas[sala_id] = {'jugadores': [jugador], 'sids': [sid]}
+    salas[sala_id] = {'jugadores': [jugador], 'sids': [sid], 'listo': []}
     sio.enter_room(sid, sala_id)
     print(f"\nSala creada: {sala_id}, Jugador: {nombre}\n")
     sio.emit('sala_creada', {'sala_id': sala_id}, room=sid)
@@ -56,8 +56,9 @@ def unirse_a_sala(sid, data):
 
     if len(salas[sala_id]['jugadores']) == 2:
         nombres_en_sala = [jug.obtener_nombre() for jug in salas[sala_id]['jugadores']]
-        print(f"Emitiendo 'iniciar_juego' para la sala {sala_id} con jugadores: {nombres_en_sala}")
-        sio.emit('iniciar_juego', {'sala_id': sala_id, 'jugadores': nombres_en_sala}, room=sala_id)
+        primer_jugador = nombres_en_sala[0]
+        print(f"Emitiendo 'iniciar_juego' para la sala {sala_id} con jugadores: {nombres_en_sala}, primer jugador: {primer_jugador}")
+        sio.emit('iniciar_juego', {'sala_id': sala_id, 'jugadores': nombres_en_sala, 'primer_jugador': primer_jugador}, room=sala_id)
 
     sio.emit('sala_unida', {'sala_id': sala_id}, room=sid)
 
@@ -70,9 +71,33 @@ def iniciar_juego(sid, data):
 def cliente_listo(sid, data):
     sala_id = data.get('sala_id')
     print(f"Cliente {sid} listo en la sala {sala_id}")
-    if len(salas[sala_id]['jugadores']) == 2:
+    if sid not in salas[sala_id]['listo']:
+        salas[sala_id]['listo'].append(sid)
+    if len(salas[sala_id]['jugadores']) == 2 and len(salas[sala_id]['listo']) == 2:
         sio.emit('juego_listo', {'sala_id': sala_id}, room=sala_id)
 
+@sio.event
+def lanzar_dados(sid, data):
+    sala_id = data.get('sala_id')
+    resultados = data.get('resultados')
+    print(f"\nEl jugador {sid} en la sala {sala_id} ha lanzado los dados: {resultados}\n")
+    sio.emit('resultados_lanzamiento', {'jugador_sid': sid, 'resultados': resultados}, room=sala_id)
+
+@sio.event
+def disconnect(sid):
+    print(f"Cliente desconectado: {sid}")
+    for sala_id, data in list(salas.items()):
+        if sid in data['sids']:
+            print(f"El cliente {sid} se desconectó de la sala {sala_id}")
+            data['jugadores'] = [jug for i, jug in enumerate(data['jugadores']) if data['sids'][i] != sid]
+            data['sids'].remove(sid)
+            data['listo'] = [s for s in data['listo'] if s != sid]
+            if not data['jugadores']:
+                del salas[sala_id]
+                print(f"Sala {sala_id} eliminada por falta de jugadores.")
+            else:
+                sio.emit('jugador_desconectado', {'sid': sid}, room=sala_id)
+            break
 
 
 if __name__ == '__main__':

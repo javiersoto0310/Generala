@@ -2,14 +2,14 @@ from PySide6.QtGui import QPixmap
 from PySide6.QtCore import Qt
 
 class Estilo:
-    def __init__(self, ui):
-        self.ui = ui
+    def __init__(self, ventana_juego):
+        self.ventana_juego = ventana_juego
         self.dados_labels = [
-            self.ui.dado1,
-            self.ui.dado2,
-            self.ui.dado3,
-            self.ui.dado4,
-            self.ui.dado5,
+            self.ventana_juego.dado1,
+            self.ventana_juego.dado2,
+            self.ventana_juego.dado3,
+            self.ventana_juego.dado4,
+            self.ventana_juego.dado5,
         ]
         self.configurar_tamano_dados()
         self.configurar_tamano_tiradas()
@@ -17,15 +17,17 @@ class Estilo:
 
     def configurar_tamano_dados(self):
         for lbl in self.dados_labels:
-            lbl.setMinimumSize(50, 50)
-            lbl.setMaximumSize(80, 80)
+            if lbl:
+                lbl.setMinimumSize(50, 50)
+                lbl.setMaximumSize(80, 80)
 
     def configurar_tamano_tiradas(self):
-        tirada_labels = [self.ui.tirada1, self.ui.tirada2, self.ui.tirada3]
+        tirada_labels = [self.ventana_juego.tirada1, self.ventana_juego.tirada2, self.ventana_juego.tirada3]
         for label in tirada_labels:
-            label.setMinimumSize(50, 50)
-            label.setMaximumSize(50, 50)
-            label.setScaledContents(True)
+            if label:
+                label.setMinimumSize(50, 50)
+                label.setMaximumSize(50, 50)
+                label.setScaledContents(True)
 
     def cargar_rutas_imagenes(self):
         base_path = "recursos/img/"
@@ -33,7 +35,7 @@ class Estilo:
 
     def mostrar_dados(self, dados):
         for i, valor_dado in enumerate(dados):
-            if valor_dado is not None:
+            if valor_dado is not None and i < len(self.dados_labels) and self.dados_labels[i]:
                 pixmap = QPixmap(self.dado_imagenes[valor_dado - 1])
                 scaled_pixmap = pixmap.scaled(100, 100, Qt.KeepAspectRatio)
                 self.dados_labels[i].setPixmap(scaled_pixmap)
@@ -45,10 +47,10 @@ class Estilo:
             f"{base_path}tirada2.png",
             f"{base_path}tirada3.png"
         ]
-        tiradas_labels = [self.ui.tirada1, self.ui.tirada2, self.ui.tirada3]
+        tiradas_labels = [self.ventana_juego.tirada1, self.ventana_juego.tirada2, self.ventana_juego.tirada3]
         tirada_actual = 3 - tiradas_restantes
 
-        if 0 <= tirada_actual < len(imagenes_tiradas):
+        if 0 <= tirada_actual < len(imagenes_tiradas) and tirada_actual < len(tiradas_labels) and tiradas_labels[tirada_actual]:
             pixmap = QPixmap(imagenes_tiradas[tirada_actual])
             #scaled_pixmap = pixmap.scaled(50, 50, Qt.KeepAspectRatio)
             tiradas_labels[tirada_actual].setPixmap(pixmap)
@@ -56,17 +58,21 @@ class Estilo:
 
     def aplicar_estilo_seleccionado(self, indice_dado, seleccionado):
         estilo = "border: 2px solid red;" if seleccionado else "border: none;"
-        self.dados_labels[indice_dado].setStyleSheet(estilo)
+        if indice_dado < len(self.dados_labels) and self.dados_labels[indice_dado]:
+            self.dados_labels[indice_dado].setStyleSheet(estilo)
 
     def resetear_estilos_dados(self):
         for lbl in self.dados_labels:
-            lbl.setStyleSheet("border: none;")
+            if lbl:
+                lbl.setStyleSheet("border: none;")
 
     def limpiar_dados(self):
         for lbl in self.dados_labels:
-            lbl.clear()
+            if lbl:
+                lbl.clear()
 
     def limpiar_tiradas(self):
-        self.ui.tirada1.clear()
-        self.ui.tirada2.clear()
-        self.ui.tirada3.clear()
+        if self.ventana_juego:
+            self.ventana_juego.tirada1.clear()
+            self.ventana_juego.tirada2.clear()
+            self.ventana_juego.tirada3.clear()

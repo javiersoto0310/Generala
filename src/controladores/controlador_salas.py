@@ -6,7 +6,7 @@ import logging
 logging.basicConfig(level=logging.INFO)
 
 class ControladorSalas(QObject):
-    mostrar_juego = Signal(str, list)
+    mostrar_juego = Signal(str, list, str)
     error = Signal(str)
     conexion_exitosa = Signal()
     mostrar_salas = Signal(list)
@@ -73,12 +73,13 @@ class ControladorSalas(QObject):
         @self.cliente.event
         def iniciar_juego(data):
             logging.info(f"Evento 'iniciar_juego' recibido para la sala: {data.get('sala_id')}")
-            if 'sala_id' in data and 'jugadores' in data:
+            if 'sala_id' in data and 'jugadores' in data and 'primer_jugador' in data:
                 sala_id = data['sala_id']
                 jugadores = data['jugadores']
-                self.mostrar_juego.emit(sala_id, jugadores)
-                if self.controlador_juego:
-                    self.controlador_juego.iniciar_partida(jugadores, self.nombre_jugador_actual)
+                primer_jugador = data['primer_jugador']
+                self.mostrar_juego.emit(sala_id, jugadores,primer_jugador)
+                logging.warning(f"Evento 'iniciar_juego' recibido con datos incompletos: {data}")
+
     def crear_sala(self):
         if not self.cliente.connected:
             self.error.emit("No hay conexión con el servidor")
