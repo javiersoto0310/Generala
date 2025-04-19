@@ -80,8 +80,14 @@ def cliente_listo(sid, data):
 def lanzar_dados(sid, data):
     sala_id = data.get('sala_id')
     resultados = data.get('resultados')
-    print(f"\nEl jugador {sid} en la sala {sala_id} ha lanzado los dados: {resultados}\n")
-    sio.emit('resultados_lanzamiento', {'jugador_sid': sid, 'resultados': resultados}, room=sala_id)
+    tiradas_restantes = data.get('tiradas_restantes')
+
+    print(f"\nEl jugador {sid} en la sala {sala_id} ha lanzado los dados: {resultados} (quedan {tiradas_restantes} tiradas)\n")
+    sio.emit('resultados_lanzamiento', {
+        'jugador_sid': sid,
+        'resultados': resultados,
+        'tiradas_restantes': tiradas_restantes
+    }, room=sala_id)
 
 @sio.event
 def disconnect(sid):

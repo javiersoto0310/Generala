@@ -1,3 +1,5 @@
+import logging
+
 from PySide6.QtGui import QPixmap
 from PySide6.QtCore import Qt
 
@@ -34,11 +36,22 @@ class Estilo:
         return [f"{base_path}dado{i}.png" for i in range(1, 7)]
 
     def mostrar_dados(self, dados):
-        for i, valor_dado in enumerate(dados):
-            if valor_dado is not None and i < len(self.dados_labels) and self.dados_labels[i]:
-                pixmap = QPixmap(self.dado_imagenes[valor_dado - 1])
-                scaled_pixmap = pixmap.scaled(100, 100, Qt.KeepAspectRatio)
-                self.dados_labels[i].setPixmap(scaled_pixmap)
+        for i in range(5):
+            if i < len(self.dados_labels) and self.dados_labels[i]:
+                valor = dados[i] if i < len(dados) else None
+                if valor is not None and 1 <= valor <= 6:
+                    try:
+                        pixmap = QPixmap(f"recursos/img/dado{valor}.png")
+                        self.dados_labels[i].setPixmap(pixmap.scaled(
+                            self.dados_labels[i].size(),
+                            Qt.KeepAspectRatio,
+                            Qt.SmoothTransformation
+                        ))
+                    except Exception as e:
+                        logging.error(f"Error al cargar imagen para dado {valor}: {str(e)}")
+                        self.dados_labels[i].setText(str(valor))
+                else:
+                    self.dados_labels[i].clear()
 
     def actualizar_imagen_tirada(self, tiradas_restantes):
         base_path = "recursos/img/"

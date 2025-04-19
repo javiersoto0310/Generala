@@ -80,6 +80,16 @@ class ControladorSalas(QObject):
                 self.mostrar_juego.emit(sala_id, jugadores,primer_jugador)
                 logging.warning(f"Evento 'iniciar_juego' recibido con datos incompletos: {data}")
 
+        @self.cliente.event
+        def resultados_lanzamiento(data):
+            logging.info(f"Resultados de lanzamiento recibidos: {data}")
+            if 'resultados' in data and self.controlador_juego:
+                self.controlador_juego.recibir_resultados_lanzamiento(
+                    data['jugador_sid'],
+                    data['resultados'],
+                    data.get('tiradas_restantes')
+                )
+
     def crear_sala(self):
         if not self.cliente.connected:
             self.error.emit("No hay conexión con el servidor")

@@ -36,7 +36,6 @@ class MainApp(QObject):
         self.ui_conexion.btn_listar_salas.clicked.connect(self.controlador_salas.listar_salas)
 
         self.controlador_salas.mostrar_juego.connect(self.mostrar_ventana_juego, Qt.QueuedConnection)
-       # self.controlador_salas.error.connect(self.mostrar_error, Qt.QueuedConnection)
         self.controlador_salas.conexion_exitosa.connect(self.on_conexion_exitosa, Qt.QueuedConnection)
         self.controlador_salas.mostrar_salas.connect(self.mostrar_salas)
 
@@ -77,19 +76,19 @@ class MainApp(QObject):
         self.ventana_conexion.hide()
 
         self.ventana_juego = JuegoVentana()
-        self.ventana_juego.setWindowTitle(f"Generala - Sala: {sala_id} - Jugador: {self.controlador_salas.nombre_jugador_actual}")
+        self.ventana_juego.setWindowTitle(
+            f"Generala - Sala: {sala_id} - Jugador: {self.controlador_salas.nombre_jugador_actual}")
+
+        self.ventana_juego.lanzar_dados_btn.clicked.connect(self.controlador_juego.lanzar_dados)
 
         self.controlador_juego.turno_actual_cambiado.connect(self.ventana_juego.actualizar_jugador_actual)
-        self.controlador_juego.habilitar_lanzamiento.connect(self.ventana_juego.habilitar_boton_lanzar,Qt.QueuedConnection)
-        self.controlador_juego.deshabilitar_lanzamiento.connect(self.ventana_juego.deshabilitar_boton_lanzar,Qt.QueuedConnection)
-
-        self.controlador_juego.iniciar_partida(
-            jugadores,
-            self.controlador_salas.nombre_jugador_actual,
-            sala_id=sala_id,
-            primer_jugador=primer_jugador
-        )
+        self.controlador_juego.habilitar_lanzamiento.connect(self.ventana_juego.habilitar_boton_lanzar, Qt.QueuedConnection)
+        self.controlador_juego.deshabilitar_lanzamiento.connect(self.ventana_juego.deshabilitar_boton_lanzar, Qt.QueuedConnection)
+        self.controlador_juego.actualizar_tiradas_restantes.connect(self.ventana_juego.actualizar_contador_tiradas)
+        self.controlador_juego.mostrar_resultados_lanzamiento.connect(self.ventana_juego.actualizar_dados_lanzados,Qt.QueuedConnection)
+        self.controlador_juego.iniciar_partida(jugadores,self.controlador_salas.nombre_jugador_actual,sala_id=sala_id, primer_jugador=primer_jugador)
 
         self.ventana_juego.show()
+
 if __name__ == "__main__":
     app = MainApp()

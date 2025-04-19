@@ -14,6 +14,7 @@ class ControladorJuego(QObject):
     habilitar_lanzamiento = Signal()
     deshabilitar_lanzamiento = Signal()
     mostrar_resultados_lanzamiento = Signal(str, list)
+    actualizar_tiradas_restantes = Signal(int)  # Nueva señal
 
     def __init__(self):
         super().__init__()
@@ -24,6 +25,9 @@ class ControladorJuego(QObject):
         self.puede_lanzar: bool = False
         self.sala_id_actual: Optional[str] = None
         self.cliente: Optional[socketio.Client] = None
+        self.tiradas_restantes: int = 0
+        self.dados_actuales: List[Optional[int]] = [None] * 5
+        self.dados_bloqueados: List[bool] = [False] * 5
 
     def set_cliente(self, cliente: socketio.Client):
         self.cliente = cliente
@@ -35,6 +39,7 @@ class ControladorJuego(QObject):
         self.jugador_actual = None
         self.sala_id_actual = sala_id
         self.puede_lanzar = False
+        self.resetear_tiradas()  
 
         for nombre in nombres_jugadores:
             jugador = Jugador(nombre)
@@ -46,56 +51,87 @@ class ControladorJuego(QObject):
             self.turno = Turno(primer_jugador)
             self.indice_jugador_actual = self.jugadores.index(self.jugador_actual)
             logging.info(f"Jugadores locales creados: {[j.obtener_nombre() for j in self.jugadores]}, turno inicial: {self.turno.obtener_jugador_actual()}")
-            logging.info(f"Turno inicial: {self.turno.obtener_jugador_actual()}")
 
             self.turno_actual_cambiado.emit(primer_jugador)
 
             if primer_jugador == nombre_local:
-                logging.info(f"ControladorJuego - Habilitando lanzamiento para: {nombre_local} (primer jugador: {primer_jugador})")
-                self.puede_lanzar = True
-                self.habilitar_lanzamiento.emit()
+                self.iniciar_turno()  
             else:
-                logging.info(f"ControladorJuego - Deshabilitando lanzamiento para: {nombre_local} (primer jugador: {primer_jugador})")
                 self.puede_lanzar = False
                 self.deshabilitar_lanzamiento.emit()
         else:
             logging.error("No se pudo determinar el jugador local.")
 
+    def resetear_tiradas(self):
+        self.tiradas_restantes = 0
+        self.dados_actuales = [None] * 5
+        self.dados_bloqueados = [False] * 5
+        self.actualizar_tiradas_restantes.emit(self.tiradas_restantes)
+
+    def iniciar_turno(self):
+        self.tiradas_restantes = 3
+        self.dados_bloqueados = [False] * 5
+        self.puede_lanzar = True
+        self.actualizar_tiradas_restantes.emit(self.tiradas_restantes)
+        self.habilitar_lanzamiento.emit()
+        logging.info(f"Turno iniciado. Tiradas restantes: {self.tiradas_restantes}")
+
     def lanzar_dados(self):
-        if self.puede_lanzar and self.jugador_actual and self.turno.obtener_jugador_actual() == self.jugador_actual.obtener_nombre() and self.cliente:
-            dados_lanzados = [Dado().lanzar() for _ in range(5)]
-            logging.info(f"{self.jugador_actual.obtener_nombre()} ha lanzado los dados: {dados_lanzados}")
-            self.cliente.emit('lanzar_dados', {'sala_id': self.sala_id_actual, 'resultados': dados_lanzados})
+        if not self.puede_lanzar or self.tiradas_restantes <= 0:
+            logging.warning("No es el turno para lanzar o no quedan tiradas")
+            return
+
+        for i in range(5):
+            if not self.dados_bloqueados[i]:
+                self.dados_actuales[i] = Dado().lanzar()
+
+        self.tiradas_restantes -= 1
+        self.actualizar_tiradas_restantes.emit(self.tiradas_restantes)
+        logging.info(f"Tirada realizada. Restantes: {self.tiradas_restantes} - Dados: {self.dados_actuales}")
+
+        self.mostrar_resultados_lanzamiento.emit(self.jugador_actual.obtener_nombre(), self.dados_actuales)
+
+        if self.cliente:
+            self.cliente.emit('lanzar_dados', {
+                'sala_id': self.sala_id_actual,
+                'resultados': self.dados_actuales,
+                'tiradas_restantes': self.tiradas_restantes
+            })
+
+        if self.tiradas_restantes == 0:
             self.puede_lanzar = False
             self.deshabilitar_lanzamiento.emit()
-        elif not self.puede_lanzar:
-            logging.warning("No es el turno para lanzar los dados o ya has lanzado.")
-        elif self.jugador_actual and self.turno.obtener_jugador_actual() != self.jugador_actual.obtener_nombre():
-            logging.warning("No es el turno del jugador local para lanzar.")
-        else:
-            logging.error("Error al intentar lanzar los dados: jugador actual no definido o cliente no conectado.")
 
     def pasar_turno(self):
         if self.jugadores:
+            self.resetear_tiradas()
             self.indice_jugador_actual = (self.indice_jugador_actual + 1) % len(self.jugadores)
             nuevo_jugador = self.jugadores[self.indice_jugador_actual]
             self.turno.reiniciar_turno(nuevo_jugador.obtener_nombre())
-            logging.info(f"Reiniciando turno para el jugador: {nuevo_jugador.obtener_nombre()}")
 
             self.turno_actual_cambiado.emit(self.turno.obtener_jugador_actual())
-            logging.info(f"Emitida señal turno_actual_cambiado con jugador: {self.turno.obtener_jugador_actual()}")
+            logging.info(f"Turno cambiado a: {self.turno.obtener_jugador_actual()}")
 
             if nuevo_jugador.obtener_nombre() == self.jugador_actual.obtener_nombre():
-                self.puede_lanzar = True
-                logging.info(f"Habilitando botón de lanzamiento para el jugador local: {nuevo_jugador.obtener_nombre()}")
-                self.habilitar_lanzamiento.emit()
+                self.iniciar_turno()
             else:
-                logging.info(f"El jugador local no tiene el turno: {self.jugador_actual.obtener_nombre()}")
+                self.puede_lanzar = False
+                self.deshabilitar_lanzamiento.emit()
 
-    def recibir_resultados_lanzamiento(self, jugador_sid, resultados):
+    def recibir_resultados_lanzamiento(self, jugador_sid, resultados, tiradas_restantes=None):
         logging.info(f"Resultados del lanzamiento del jugador {jugador_sid}: {resultados}")
+
         self.mostrar_resultados_lanzamiento.emit(jugador_sid, resultados)
 
+        jugador_oponente = next((j for j in self.jugadores if j.obtener_nombre() != self.jugador_actual.obtener_nombre()), None)
+        if jugador_oponente and jugador_sid != self.jugador_actual.obtener_nombre():
+            self.dados_actuales = resultados
+            self.actualizar_tiradas_restantes.emit(tiradas_restantes if tiradas_restantes is not None else 0)
+
+    def gestionar_bloqueo_dado(self, indice_dado: int):
+        if 0 <= indice_dado < 5 and self.tiradas_restantes < 3:
+            self.dados_bloqueados[indice_dado] = not self.dados_bloqueados[indice_dado]
+            logging.info(f"Dado {indice_dado} bloqueado: {self.dados_bloqueados[indice_dado]}")
 
 
 
