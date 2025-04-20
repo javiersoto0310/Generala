@@ -54,20 +54,38 @@ class Estilo:
                     self.dados_labels[i].clear()
 
     def actualizar_imagen_tirada(self, tiradas_restantes):
-        base_path = "recursos/img/"
-        imagenes_tiradas = [
-            f"{base_path}tirada1.png",
-            f"{base_path}tirada2.png",
-            f"{base_path}tirada3.png"
-        ]
-        tiradas_labels = [self.ventana_juego.tirada1, self.ventana_juego.tirada2, self.ventana_juego.tirada3]
-        tirada_actual = 3 - tiradas_restantes
+        try:
+            print(f"Actualizando tiradas (restantes: {tiradas_restantes})")
+            tiradas_realizadas = 3 - tiradas_restantes
 
-        if 0 <= tirada_actual < len(imagenes_tiradas) and tirada_actual < len(tiradas_labels) and tiradas_labels[tirada_actual]:
-            pixmap = QPixmap(imagenes_tiradas[tirada_actual])
-            #scaled_pixmap = pixmap.scaled(50, 50, Qt.KeepAspectRatio)
-            tiradas_labels[tirada_actual].setPixmap(pixmap)
-            tiradas_labels[tirada_actual].setAlignment(Qt.AlignCenter)
+            for i, label in enumerate([self.ventana_juego.tirada1,
+                                       self.ventana_juego.tirada2,
+                                       self.ventana_juego.tirada3], start=1):
+                if not label:
+                    print(f"Error: Label tirada{i} no existe!")
+                    continue
+
+                print(f"Procesando tirada{i}")
+                if i <= tiradas_realizadas:
+                    img_path = f"recursos/img/tirada{i}.png"
+                    print(f"Cargando imagen: {img_path}")  # Debug
+
+                    pixmap = QPixmap(img_path)
+                    if pixmap.isNull():
+                        print(f"Error: No se pudo cargar {img_path}")
+                        label.setText(f"Tirada {i}")
+                    else:
+                        label.setPixmap(pixmap.scaled(
+                            label.size(),
+                            Qt.KeepAspectRatio,
+                            Qt.SmoothTransformation
+                        ))
+                        label.show()
+                else:
+                    label.clear()
+        except Exception as e:
+            print(f"Error crítico en actualizar_imagen_tirada: {str(e)}")
+            logging.error(f"Error en actualizar_imagen_tirada: {str(e)}")
 
     def aplicar_estilo_seleccionado(self, indice_dado, seleccionado):
         estilo = "border: 2px solid red;" if seleccionado else "border: none;"

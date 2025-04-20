@@ -8,7 +8,7 @@ from PySide6.QtCore import QObject, Qt
 from src.vista.pantalla_conexion import Conexion
 from src.controladores.controlador_salas import ControladorSalas
 from src.controladores.controlador_juego import ControladorJuego
-from src.vista.juego_ventana import JuegoVentana
+from src.vista.vista_pantalla_juego import JuegoVentana
 
 
 class MainApp(QObject):
@@ -75,7 +75,7 @@ class MainApp(QObject):
         logging.info(f"Mostrando pantalla de juego para la sala: {sala_id} con jugadores: {jugadores}")
         self.ventana_conexion.hide()
 
-        self.ventana_juego = JuegoVentana()
+        self.ventana_juego = JuegoVentana(self.controlador_juego)
         self.ventana_juego.setWindowTitle(
             f"Generala - Sala: {sala_id} - Jugador: {self.controlador_salas.nombre_jugador_actual}")
 
@@ -84,7 +84,8 @@ class MainApp(QObject):
         self.controlador_juego.turno_actual_cambiado.connect(self.ventana_juego.actualizar_jugador_actual)
         self.controlador_juego.habilitar_lanzamiento.connect(self.ventana_juego.habilitar_boton_lanzar, Qt.QueuedConnection)
         self.controlador_juego.deshabilitar_lanzamiento.connect(self.ventana_juego.deshabilitar_boton_lanzar, Qt.QueuedConnection)
-        self.controlador_juego.actualizar_tiradas_restantes.connect(self.ventana_juego.actualizar_contador_tiradas)
+        self.controlador_juego.actualizar_tiradas_restantes.connect(self.ventana_juego.estilo.actualizar_imagen_tirada)
+        self.controlador_juego.actualizar_tiradas_restantes.connect(self.ventana_juego.actualizar_mensaje_tiradas_agotadas)
         self.controlador_juego.mostrar_resultados_lanzamiento.connect(self.ventana_juego.actualizar_dados_lanzados,Qt.QueuedConnection)
         self.controlador_juego.iniciar_partida(jugadores,self.controlador_salas.nombre_jugador_actual,sala_id=sala_id, primer_jugador=primer_jugador)
 

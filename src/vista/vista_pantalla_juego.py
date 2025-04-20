@@ -12,10 +12,17 @@ class JuegoVentana(QMainWindow, PantallaJuego):
         super().__init__()
         super().setupUi(self)
 
+        print(f"Estado inicial de tirada1 - Visible: {self.tirada1.isVisible()}, Geometry: {self.tirada1.geometry()}")
+
+        for tirada in [self.tirada1, self.tirada2, self.tirada3]:
+            tirada.setVisible(False)
+            tirada.raise_()
+            tirada.setStyleSheet("background: transparent; border: none;")
+
         self.controlador = controlador
         self.label_jugador_actual = self.findChild(QLabel, 'jugador_actual')
         self.lanzar_dados_btn = self.findChild(QPushButton, 'lanzar_dados')
-        self.contador_tiradas_label = self.findChild(QLabel, 'contador_tiradas')
+        self.Tiradas_agotadas_label = self.findChild(QLabel, 'Tiradas_agotadas')
 
         if not self.label_jugador_actual:
             logging.error("Error crítico: QLabel 'jugador_actual' no encontrado")
@@ -25,33 +32,45 @@ class JuegoVentana(QMainWindow, PantallaJuego):
         if self.lanzar_dados_btn:
             self.lanzar_dados_btn.setEnabled(False)
 
-        if self.contador_tiradas_label:
-            self.contador_tiradas_label.setText("Tiradas: 0")
+        if self.Tiradas_agotadas_label:
+            self.Tiradas_agotadas_label.setText("")
 
         self.estilo = Estilo(self)
+
+        print(f"Tamaño de tirada1: {self.tirada1.size()}")
+        print(f"¿tirada1 es visible? {self.tirada1.isVisible()}")
 
         self.configurar_clicks_dados()
         logging.info("Ventana de juego inicializada correctamente")
 
         if controlador:
             controlador.mostrar_resultados_lanzamiento.connect(self.actualizar_dados_lanzados)
+            controlador.actualizar_tiradas_restantes.connect(self.estilo.actualizar_imagen_tirada)
+            controlador.actualizar_tiradas_restantes.connect(self.actualizar_mensaje_tiradas_agotadas)
+
+    def actualizar_mensaje_tiradas_agotadas(self, tiradas_restantes):
+        if self.controlador and hasattr(self.controlador, 'turno') and hasattr(self.controlador.turno, 'obtener_jugador_actual') and hasattr(self.controlador, 'jugador_actual'):
+            jugador_activo = self.controlador.turno.obtener_jugador_actual()
+            jugador_local = self.controlador.jugador_actual.obtener_nombre()
+            if self.Tiradas_agotadas_label:
+                if tiradas_restantes == 0 and jugador_activo == jugador_local:
+                    self.Tiradas_agotadas_label.setText("Debes seleccionar una categoría!!!")
+                else:
+                    self.Tiradas_agotadas_label.setText("")
+        elif self.Tiradas_agotadas_label:
+            self.Tiradas_agotadas_label.setText("")
 
     def configurar_clicks_dados(self):
         for i, dado_label in enumerate(self.estilo.dados_labels):
             if dado_label:
-                dado_label.mousePressEvent = lambda event, idx=i: self.toggle_dado_bloqueado(idx)
+                dado_label.mousePressEvent = lambda event, idx=i: self.seleccionar_dado_para_bloqueo(idx)
 
-    def toggle_dado_bloqueado(self, indice_dado):
+    def seleccionar_dado_para_bloqueo(self, indice_dado):
         if self.controlador and hasattr(self.controlador, 'tiradas_restantes'):
-            if self.controlador.tiradas_restantes < 3:  # Solo después de la primera tirada
+            if self.controlador.tiradas_restantes < 3:
                 self.controlador.dados_bloqueados[indice_dado] = not self.controlador.dados_bloqueados[indice_dado]
                 self.estilo.aplicar_estilo_seleccionado(indice_dado, self.controlador.dados_bloqueados[indice_dado])
                 logging.info(f"Dado {indice_dado} bloqueado: {self.controlador.dados_bloqueados[indice_dado]}")
-
-    def actualizar_contador_tiradas(self, tiradas_restantes):
-        if hasattr(self, 'contador_tiradas_label') and self.contador_tiradas_label:
-            self.contador_tiradas_label.setText(f"Tiradas: {tiradas_restantes}")
-            logging.info(f"Actualizado contador de tiradas: {tiradas_restantes}")
 
     def habilitar_boton_lanzar(self):
         if self.lanzar_dados_btn:

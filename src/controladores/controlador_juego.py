@@ -63,10 +63,12 @@ class ControladorJuego(QObject):
             logging.error("No se pudo determinar el jugador local.")
 
     def resetear_tiradas(self):
-        self.tiradas_restantes = 0
+        self.tiradas_restantes = 3  # Reinicia contador
         self.dados_actuales = [None] * 5
         self.dados_bloqueados = [False] * 5
         self.actualizar_tiradas_restantes.emit(self.tiradas_restantes)
+        if hasattr(self, 'vista') and self.vista.estilo:
+            self.vista.estilo.limpiar_tiradas()
 
     def iniciar_turno(self):
         self.tiradas_restantes = 3
