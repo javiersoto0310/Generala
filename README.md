@@ -38,56 +38,68 @@ El objetivo del juego es obtener la mayor cantidad de puntos posible al completa
 
 ## Cómo ejecutar el proyecto
 
-1. **Abre la terminal o línea de comandos:**
-   * En Windows, puedes buscar "cmd" o "PowerShell" en el menú de inicio.
-   * En macOS y Linux, puedes abrir la aplicación "Terminal".
+Antes de comenzar, necesitarás abrir una **terminal** o **línea de comandos** en tu computadora. Aquí te explico cómo hacerlo en los sistemas operativos más comunes:
 
-2. **Navega al directorio del proyecto:**
-   * Usa el comando `cd` (change directory) para ir a la carpeta donde clonaste el repositorio. Por ejemplo, si clonaste el repositorio en una carpeta llamada "generala", escribe:
-     ```bash
-     cd generala
-     ```
+* **En Windows:**
+    1.  Presiona la tecla de **Windows** en tu teclado.
+    2.  Escribe `cmd` y presiona **Enter**. Esto abrirá la ventana del Símbolo del sistema (CMD).
+    3.  Alternativamente, puedes buscar "Símbolo del sistema" en el menú de inicio.
 
-3. **Crea un entorno virtual:**
-   * Un entorno virtual es como una "caja" donde se instalan las dependencias del proyecto, aislándolas de otros proyectos.
-   * Para crear un entorno virtual, usa el siguiente comando:
-     ```bash
-     python3 -m venv venv
-     ```
-   * Esto creará una carpeta llamada "venv" dentro de tu proyecto.
+* **En Linux:**
+    1.  La forma de abrir la terminal puede variar según la distribución. Generalmente, puedes encontrarla buscando "Terminal" en el menú de aplicaciones o usando una combinación de teclas como Ctrl + Alt + T.
 
-4. **Activa el entorno virtual:**
-   * Antes de instalar las dependencias, debes "activar" el entorno virtual.
-   * En Windows, usa este comando:
-     ```bash
-     venv\Scripts\activate
-     ```
-   * En macOS y Linux, usa este comando:
-     ```bash
-     source venv/bin/activate
-     ```
-   * Verás que el nombre del entorno virtual ("venv") aparece al principio de la línea de comandos, indicando que está activado.
+Una vez que tengas la terminal abierta, sigue estos pasos:
 
-5. **Instala las dependencias:**
-   * Ahora, instala las bibliotecas necesarias para que el juego funcione. Usa el siguiente comando:
-     ```bash
-     pip install -r requirements.txt
-     ```
-   * Este comando leerá el archivo `requirements.txt` e instalará todas las dependencias necesarias.
+1.  **Clonar el repositorio desde GitHub:**
+    * Usa el siguiente comando para descargar el código del juego:
+        ```bash
+        git clone [https://github.com/javiersoto0310/Generala.git](https://github.com/javiersoto0310/Generala.git)
+        ```
+    * Una vez que se complete la descarga, navega a la carpeta del proyecto usando el comando:
+        ```bash
+        cd Generala
+        ```
 
-6. **Ejecuta el juego:**
-   * Finalmente, ejecuta el juego usando el siguiente comando:
-     ```bash
-     python main.py
-     ```
-   * ¡El juego debería abrirse!
+2.  **Instalar Python y pip (si no los tienes instalados):**
+    * Para ejecutar este juego, necesitarás tener instalado **Python** en tu computadora. `pip` es un programa que viene con Python y nos permite instalar otras herramientas necesarias. Si no tienes Python instalado, puedes descargarlo desde el sitio web oficial: [https://www.python.org/downloads/](https://www.python.org/downloads/). Asegúrate de marcar la opción para agregar Python al PATH durante la instalación.
 
-## Archivos adicionales necesarios
+3.  **Instalar pip-tools:**
+    * `pip-tools` es una herramienta que nos ayudará a gestionar las librerías que necesita el juego. Para instalarlo, usa el siguiente comando en la terminal:
+        ```bash
+        pip install pip-tools
+        ```
 
-Este proyecto utiliza la biblioteca **PySide6**, que incluye el archivo binario `libQt6WebEngineCore.so.6`. Este archivo es esencial para ejecutar el programa. Sin embargo, debido a su tamaño, no está incluido directamente en el repositorio.
+4.  **Crear un entorno virtual (recomendado):**
+    * Crear un **entorno virtual** es una práctica recomendada en Python para aislar las dependencias de este proyecto de otros proyectos que puedas tener en tu computadora. Esto evita posibles conflictos entre librerías. Para crear uno, usa el siguiente comando:
+        ```bash
+        python3 -m venv venv
+        ```
+    * Esto creará una carpeta llamada "venv" dentro de tu proyecto.
 
-### Cómo obtener el archivo:
-1. Asegúrate de instalar las dependencias del proyecto desde el archivo `requirements.txt`:
-   ```bash
-   pip install -r requirements.txt
+5.  **Activar el entorno virtual:**
+    * Antes de instalar las dependencias del juego, debes activar el entorno virtual. El comando para activarlo depende de tu sistema operativo:
+        * **En Windows:**
+            ```bash
+            venv\Scripts\activate
+            ```
+        * **En Linux:**
+            ```bash
+            source venv/bin/activate
+            ```
+    * Una vez activado, verás el nombre del entorno virtual (`(venv)`) al principio de la línea de comandos.
 
+6.  **Compilar e instalar las dependencias del juego:**
+    * El juego necesita algunas librerías para funcionar correctamente. Estas se definen en el archivo `requirements.in`. Primero, debes **compilar** este archivo para generar el archivo `requirements.txt` que contiene las versiones específicas de las librerías. Ejecuta el siguiente comando:
+        ```bash
+        pip-compile requirements.in
+        ```
+    * Una vez que se haya generado el archivo `requirements.txt`, puedes instalar las dependencias usando el siguiente comando:
+        ```bash
+        pip install -r requirements.txt
+        ```
+
+7.  **Ejecutar el juego:**
+    * Finalmente, para empezar a jugar a la Generala, ejecuta el siguiente comando:
+        ```bash
+        python main.py
+        ```
