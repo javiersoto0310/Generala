@@ -1,12 +1,12 @@
-# Generala
+# Generala en Red
 
 ## Objetivo del juego
 
-El objetivo del juego es obtener la mayor cantidad de puntos posible al completar diferentes combinaciones con los cinco dados.
+El objetivo del juego es obtener la mayor cantidad de puntos posible al completar diferentes combinaciones con los cinco dados, compitiendo contra otros jugadores a través de la red.
 
 ## Reglas del juego
 
-- **Turnos:** Los jugadores se turnan para lanzar los dados.
+- **Turnos:** Los jugadores se turnan para lanzar los dados. El orden de los turnos se determina una vez que los jugadores se unen a la sala de juego, comenzando por quien creó la sala.
 - **Lanzamientos:**
   * En cada turno, el jugador tiene hasta tres oportunidades para lanzar los dados.
   * En el primer lanzamiento, se lanzan los cinco dados.
@@ -32,13 +32,19 @@ El objetivo del juego es obtener la mayor cantidad de puntos posible al completa
     * Póker: 40 puntos.
     * Generala: 50 puntos.
     * Generala doble: 100 puntos.
+- **Juego en Red:**
+  * Un jugador inicia una sala de juego actuando como servidor.
+  * Otros jugadores (clientes) pueden listar las salas disponibles y unirse a una de ellas.
+  * Solo pueden jugar dos jugadores por sala.
+  * Los turnos se suceden entre los jugadores conectados a la misma sala.
+  * El ganador se determina al finalizar la partida, basándose en la mayor cantidad de puntos acumulados por cada jugador.
 - **Fin del juego:**
-  * El juego finaliza cuando los jugadores han completado todas las categorías.
-  * El jugador con la mayor cantidad de puntos es el ganador.
+  * El juego finaliza cuando los jugadores en la sala han completado todas las categorías.
+  * El jugador con la mayor cantidad de puntos es el ganador de la partida en red.
 
 ## Cómo ejecutar el proyecto
 
-Antes de comenzar, necesitarás abrir una **terminal** o **línea de comandos** en tu computadora. Aquí te explico cómo hacerlo en los sistemas operativos más comunes:
+Antes de comenzar, necesitarás abrir varias **terminales** o **líneas de comandos** en tu computadora. Aquí te explico cómo hacerlo en los sistemas operativos más comunes:
 
 * **En Windows:**
     1.  Presiona la tecla de **Windows** en tu teclado.
@@ -48,7 +54,7 @@ Antes de comenzar, necesitarás abrir una **terminal** o **línea de comandos** 
 * **En Linux:**
     1.  La forma de abrir la terminal puede variar según la distribución. Generalmente, puedes encontrarla buscando "Terminal" en el menú de aplicaciones o usando una combinación de teclas como Ctrl + Alt + T.
 
-Una vez que tengas la terminal abierta, sigue estos pasos:
+Una vez que tengas las terminales abiertas, sigue estos pasos:
 
 1.  **Clonar el repositorio desde GitHub:**
     * Usa el siguiente comando para descargar el código del juego:
@@ -98,8 +104,44 @@ Una vez que tengas la terminal abierta, sigue estos pasos:
         pip install -r requirements.txt
         ```
 
-7.  **Ejecutar el juego:**
-    * Finalmente, para empezar a jugar a la Generala, ejecuta el siguiente comando:
-        ```bash
-        python main.py
-        ```
+7.  **Ejecutar el juego en red:**
+    * **Iniciar el Servidor:**
+        * Abre una **nueva** ventana de terminal o línea de comandos.
+        * Navega a la carpeta `src/red` dentro del directorio de tu proyecto Generala:
+            ```bash
+            cd Generala/src/red
+            ```
+        * Ejecuta el archivo del servidor para iniciar la funcionalidad de red del juego:
+            ```bash
+            python servidor.py
+            ```
+        * Deja esta ventana de terminal abierta. El servidor estará en funcionamiento y listo para aceptar conexiones de los clientes.
+
+    * **Iniciar los Clientes (Jugadores):**
+        * Abre **dos ventanas de terminal o línea de comandos adicionales**.
+
+        * **Primer Cliente (Creación de la Sala):**
+            * En la primera de estas nuevas ventanas, navega al directorio raíz de tu proyecto Generala:
+                ```bash
+                cd Generala
+                ```
+            * Ejecuta el archivo principal del juego para iniciar el primer cliente. Este cliente será el encargado de crear la sala de juego:
+                ```bash
+                python main.py
+                ```
+
+        * **Segundo Cliente (Unirse a la Sala):**
+            * En la segunda de estas nuevas ventanas, navega también al directorio raíz de tu proyecto Generala:
+                ```bash
+                cd Generala
+                ```
+            * Ejecuta el archivo principal del juego para iniciar el segundo cliente. Este cliente deberá listar las salas disponibles y unirse a la creada por el primer cliente:
+                ```bash
+                python main.py
+                ```
+
+    * **Comenzar a Jugar:**
+        * Una vez que ambos clientes estén conectados a la misma sala, el juego comenzará.
+        * **El jugador que creó la sala será el primero en realizar su turno.**
+        * Sigue las instrucciones que aparecerán en la interfaz de cada cliente para lanzar los dados, seleccionar qué dados conservar y completar las combinaciones.
+      
