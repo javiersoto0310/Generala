@@ -14,7 +14,9 @@ class ControladorJuego(QObject):
     habilitar_lanzamiento = Signal()
     deshabilitar_lanzamiento = Signal()
     mostrar_resultados_lanzamiento = Signal(str, list)
-    actualizar_tiradas_restantes = Signal(int)  # Nueva señal
+    actualizar_tiradas_restantes = Signal(int)
+    habilitar_categorias = Signal()
+    deshabilitar_categorias = Signal()
 
     def __init__(self):
         super().__init__()
@@ -28,6 +30,7 @@ class ControladorJuego(QObject):
         self.tiradas_restantes: int = 0
         self.dados_actuales: List[Optional[int]] = [None] * 5
         self.dados_bloqueados: List[bool] = [False] * 5
+        self.tirada_realizada = False
 
     def set_cliente(self, cliente: socketio.Client):
         self.cliente = cliente
@@ -63,7 +66,7 @@ class ControladorJuego(QObject):
             logging.error("No se pudo determinar el jugador local.")
 
     def resetear_tiradas(self):
-        self.tiradas_restantes = 3  # Reinicia contador
+        self.tiradas_restantes = 3
         self.dados_actuales = [None] * 5
         self.dados_bloqueados = [False] * 5
         self.actualizar_tiradas_restantes.emit(self.tiradas_restantes)
@@ -91,18 +94,28 @@ class ControladorJuego(QObject):
         self.actualizar_tiradas_restantes.emit(self.tiradas_restantes)
         logging.info(f"Tirada realizada. Restantes: {self.tiradas_restantes} - Dados: {self.dados_actuales}")
 
+        if not hasattr(self, 'tirada_realizada'):
+            self.tirada_realizada = False
+
+        if not self.tirada_realizada:
+            self.tirada_realizada = True
+            self.habilitar_categorias.emit()
+            logging.info("Primera tirada realizada - Categorías habilitadas")
+
         self.mostrar_resultados_lanzamiento.emit(self.jugador_actual.obtener_nombre(), self.dados_actuales)
 
         if self.cliente:
             self.cliente.emit('lanzar_dados', {
                 'sala_id': self.sala_id_actual,
                 'resultados': self.dados_actuales,
-                'tiradas_restantes': self.tiradas_restantes
+                'tiradas_restantes': self.tiradas_restantes,
+                'es_primer_tiro': not self.tirada_realizada
             })
 
         if self.tiradas_restantes == 0:
             self.puede_lanzar = False
             self.deshabilitar_lanzamiento.emit()
+            logging.info("Tiradas agotadas para este turno")
 
     def pasar_turno(self):
         if self.jugadores:

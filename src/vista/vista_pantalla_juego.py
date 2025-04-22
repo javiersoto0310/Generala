@@ -1,5 +1,4 @@
 from PySide6.QtWidgets import QMainWindow, QPushButton, QLabel
-from PySide6.QtCore import Qt, Signal
 from vista.pantalla_juego import PantallaJuego
 from vista.estilo_pantalla_juego import Estilo
 import logging
@@ -48,6 +47,12 @@ class JuegoVentana(QMainWindow, PantallaJuego):
             controlador.actualizar_tiradas_restantes.connect(self.estilo.actualizar_imagen_tirada)
             controlador.actualizar_tiradas_restantes.connect(self.actualizar_mensaje_tiradas_agotadas)
 
+        if controlador:
+            controlador.habilitar_categorias.connect(self.habilitar_categorias)
+            controlador.deshabilitar_categorias.connect(self.deshabilitar_categorias)
+
+        self.deshabilitar_categorias()
+
     def actualizar_mensaje_tiradas_agotadas(self, tiradas_restantes):
         if self.controlador and hasattr(self.controlador, 'turno') and hasattr(self.controlador.turno, 'obtener_jugador_actual') and hasattr(self.controlador, 'jugador_actual'):
             jugador_activo = self.controlador.turno.obtener_jugador_actual()
@@ -85,9 +90,25 @@ class JuegoVentana(QMainWindow, PantallaJuego):
     def actualizar_jugador_actual(self, nombre_jugador: str):
         if hasattr(self, 'label_jugador_actual') and self.label_jugador_actual:
             self.label_jugador_actual.setText(f"Turno de: {nombre_jugador}")
-            logging.info(f"Actualizado jugador actual: {nombre_jugador}")
+
+        logging.info(f"Actualizado jugador actual: {nombre_jugador}")
+
+        if self.controlador and hasattr(self.controlador, 'jugador_actual'):
+            try:
+                jugador_local = self.controlador.jugador_actual.obtener_nombre()
+
+                if (nombre_jugador == jugador_local and
+                        hasattr(self.controlador, 'tirada_realizada') and
+                        self.controlador.tirada_realizada):
+                    self.habilitar_categorias()
+                else:
+                    self.deshabilitar_categorias()
+
+            except AttributeError as e:
+                logging.error(f"Error al actualizar jugador actual: {str(e)}")
+                self.deshabilitar_categorias()
         else:
-            logging.error("No se pudo actualizar jugador actual: label no disponible")
+            self.deshabilitar_categorias()
 
     def actualizar_dados_lanzados(self, jugador_sid, resultados):
         if not resultados:
@@ -105,3 +126,42 @@ class JuegoVentana(QMainWindow, PantallaJuego):
             self.deshabilitar_boton_lanzar()
 
         logging.info(f"Dados actualizados para jugador {jugador_sid}: {resultados}")
+
+    def habilitar_categorias(self):
+        if self.controlador and self.controlador.jugador_actual:
+            jugador_local = self.controlador.jugador_actual.obtener_nombre()
+            jugador_actual = self.controlador.turno.obtener_jugador_actual()
+
+            if jugador_local == jugador_actual:
+                for btn in [self.uno, self.dos, self.tres, self.cuatro,
+                            self.cinco, self.seis, self.escalera, self.full,
+                            self.poker, self.generala, self.generala_doble]:
+                    btn.setEnabled(True)
+
+    def deshabilitar_categorias(self):
+        for btn in [self.uno, self.dos, self.tres, self.cuatro,
+                    self.cinco, self.seis, self.escalera, self.full,
+                    self.poker, self.generala, self.generala_doble]:
+            btn.setEnabled(False)
+
+    def seleccionar_categoria(self, categoria: str):
+        if not (self.controlador
+                and hasattr(self.controlador, 'tirada_realizada')
+                and self.controlador.tirada_realizada):
+            return
+
+        jugador_local = self.controlador.jugador_actual.obtener_nombre()
+        jugador_turno_actual = self.controlador.turno.obtener_jugador_actual()
+        if jugador_local != jugador_turno_actual:
+            return
+
+        try:
+            self.controlador.calcular_puntos_para_categoria(
+                dados=self.controlador.dados_actuales,
+                categoria=categoria
+            )
+            self.controlador.pasar_turno()
+
+        except (AttributeError, ValueError) as e:
+            if hasattr(self, 'mostrar_error_sutil'):
+                self.mostrar_error_sutil(f"Error: {str(e)}")

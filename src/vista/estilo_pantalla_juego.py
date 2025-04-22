@@ -88,7 +88,7 @@ class Estilo:
             logging.error(f"Error en actualizar_imagen_tirada: {str(e)}")
 
     def aplicar_estilo_seleccionado(self, indice_dado, seleccionado):
-        estilo = "border: 2px solid red;" if seleccionado else "border: none;"
+        estilo = "border: 2px solid #A0A0A0;" if seleccionado else "border: none;"
         if indice_dado < len(self.dados_labels) and self.dados_labels[indice_dado]:
             self.dados_labels[indice_dado].setStyleSheet(estilo)
 
