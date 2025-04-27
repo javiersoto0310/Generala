@@ -40,11 +40,7 @@
      </widget>
     </item>
     <item>
-     <widget class="QLineEdit" name="entrada_id_sala">
-      <property name="placeholderText">
-       <string>Ingrese ID de la sala</string>
-      </property>
-     </widget>
+     <widget class="QListWidget" name="lista_salas_disponibles"/>
     </item>
     <item>
      <widget class="QPushButton" name="btn_listar_salas">

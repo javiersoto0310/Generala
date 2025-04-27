@@ -2,7 +2,7 @@
 
 ## Objetivo del juego
 
-El objetivo del juego es obtener la mayor cantidad de puntos posible al completar diferentes combinaciones con los cinco dados, compitiendo contra otros jugadores a través de la red.
+El objetivo del juego es obtener la mayor cantidad de puntos posible al completar diferentes combinaciones con los cinco dados, compitiendo contra otro jugador a través de la red.
 
 ## Reglas del juego
 
@@ -33,7 +33,7 @@ El objetivo del juego es obtener la mayor cantidad de puntos posible al completa
     * Generala: 50 puntos.
     * Generala doble: 100 puntos.
 - **Juego en Red:**
-  * Un jugador inicia una sala de juego actuando como servidor.
+  * Un jugador inicia una sala de juego.
   * Otros jugadores (clientes) pueden listar las salas disponibles y unirse a una de ellas.
   * Solo pueden jugar dos jugadores por sala.
   * Los turnos se suceden entre los jugadores conectados a la misma sala.

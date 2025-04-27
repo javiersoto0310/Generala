@@ -2,7 +2,7 @@ import logging
 import sys
 from typing import Optional, List
 
-from PySide6.QtWidgets import QApplication, QMainWindow, QMessageBox
+from PySide6.QtWidgets import QApplication, QMainWindow, QListWidgetItem
 from PySide6.QtCore import QObject, Qt
 
 from src.vista.pantalla_conexion import Conexion
@@ -32,44 +32,78 @@ class MainApp(QObject):
         self.controlador_salas.ui = self.ui_conexion
         self.controlador_salas.controlador_juego = self.controlador_juego
         self.ui_conexion.btn_crear_sala.clicked.connect(self.crear_sala)
-        self.ui_conexion.btn_unirse_a_sala.clicked.connect(self.unirse_a_sala)
-        self.ui_conexion.btn_listar_salas.clicked.connect(self.controlador_salas.listar_salas)
+        self.ui_conexion.btn_unirse_a_sala.clicked.connect(self.unirse_a_sala_seleccionada)
+        self.ui_conexion.btn_listar_salas.clicked.connect(self.solicitar_lista_salas)
 
         self.controlador_salas.mostrar_juego.connect(self.mostrar_ventana_juego, Qt.QueuedConnection)
         self.controlador_salas.conexion_exitosa.connect(self.on_conexion_exitosa, Qt.QueuedConnection)
-        self.controlador_salas.mostrar_salas.connect(self.mostrar_salas)
+        self.controlador_salas.mostrar_salas.connect(self.mostrar_salas_en_lista)
+        self.controlador_salas.error.connect(self.mostrar_error)
+        self.controlador_salas.mostrar_mensaje.connect(self.mostrar_mensaje_area)
 
         self.ventana_conexion.show()
         sys.exit(self.app.exec())
 
+
+    def mostrar_mensaje_area(self, mensaje: str):
+        self.ui_conexion.area_mensajes.setText(mensaje)
+
+    def mostrar_error(self, mensaje: str):
+        self.ui_conexion.area_mensajes.setText(mensaje)
+
     def on_conexion_exitosa(self):
-        self.ui_conexion.area_mensajes.append("Conectado al servidor")
+        self.ui_conexion.area_mensajes.setText("Conectado al servidor")
 
     def crear_sala(self):
-        if not self.controlador_salas.cliente.connected:
-            QMessageBox.critical(
-                self.ventana_conexion,
-                "Error",
-                "Espere a establecer conexión con el servidor"
-            )
+        nombre = self.ui_conexion.entrada_nombre.text().strip()
+        if not nombre:
+            self.mostrar_error("Debe ingresar su nombre")
             return
+
+        if not self.controlador_salas.cliente.connected:
+            self.mostrar_error("Espere a establecer conexión con el servidor")
+            return
+
+        self.ui_conexion.area_mensajes.setText("Sala creada, esperando oponente....")
         self.controlador_salas.crear_sala()
 
-    def unirse_a_sala(self):
-        if not self.controlador_salas.cliente.connected:
-            QMessageBox.critical(
-                self.ventana_conexion,
-                "Error",
-                "Espere a establecer conexión con el servidor"
-            )
+    def unirse_a_sala_seleccionada(self):
+        nombre = self.ui_conexion.entrada_nombre.text().strip()
+        if not nombre:
+            self.mostrar_error("Debe ingresar su nombre")
             return
-        self.controlador_salas.unirse_a_sala()
 
-    def mostrar_salas(self, lista_salas: List[dict]):
-        mensaje = "Salas disponibles:\n"
+        if not self.controlador_salas.cliente.connected:
+            self.mostrar_error("Espere a establecer conexión con el servidor")
+            return
+
+        sala_seleccionada = self.ui_conexion.lista_salas_disponibles.currentItem()
+        if sala_seleccionada:
+            sala_id = sala_seleccionada.data(Qt.UserRole)
+            self.ui_conexion.area_mensajes.setText(f"Intentando unirse a la sala: {sala_id}...")
+            self.controlador_salas.unirse_a_sala(sala_id)
+        else:
+            self.mostrar_error("Debe seleccionar una sala para unirse.")
+
+    def mostrar_salas_en_lista(self, lista_salas: List[dict]):
+        self.ui_conexion.lista_salas_disponibles.clear()
         for sala in lista_salas:
-            mensaje += f"- {sala['sala_id']}: {', '.join(sala['jugadores'])}\n"
-        self.ui_conexion.area_mensajes.setPlainText(mensaje)
+            item = QListWidgetItem(f"{sala['sala_id']} - Jugadores: {', '.join(sala['jugadores'])}")
+            item.setData(Qt.UserRole, sala['sala_id'])
+            self.ui_conexion.lista_salas_disponibles.addItem(item)
+
+    def solicitar_lista_salas(self):
+        nombre = self.ui_conexion.entrada_nombre.text().strip()
+        if not nombre:
+            self.mostrar_error("Debe ingresar su nombre")
+            return
+
+        if not self.controlador_salas.cliente.connected:
+            self.mostrar_error("Espere a establecer conexión con el servidor")
+            return
+
+        self.ui_conexion.area_mensajes.setText("Listando salas disponibles...")
+        self.controlador_salas.listar_salas()
 
     def mostrar_ventana_juego(self, sala_id: str, jugadores: List[str], primer_jugador: str):
         logging.info(f"Mostrando pantalla de juego para la sala: {sala_id} con jugadores: {jugadores}")

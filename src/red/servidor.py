@@ -1,10 +1,26 @@
+import logging
 from collections import defaultdict
 import socketio
-from eventlet import wsgi
+from eventlet import wsgi, sleep
 from modelo.jugador import Jugador
 
 sio = socketio.Server(cors_allowed_origins='*')
-salas = defaultdict(dict)
+salas = defaultdict(lambda: {'creador_sid': None, 'jugadores': [], 'sids': [], 'listo': []})
+clientes_con_sala_creada = {}
+tiempo_de_espera_conexion_oponente = 20
+
+
+def cerrar_sala_por_inactividad(sala_id):
+    sleep(tiempo_de_espera_conexion_oponente)
+    if sala_id in salas and not salas[sala_id]['jugadores'][1:]:
+        creador_sid = salas[sala_id]['creador_sid']
+        if creador_sid in clientes_con_sala_creada and clientes_con_sala_creada[creador_sid] == sala_id:
+            del clientes_con_sala_creada[creador_sid]
+        logging.info(f"Cerrando sala {sala_id} por inactividad.")
+        sio.emit('sala_cerrada_inactividad', {'mensaje': 'Sala cerrada, no se unió ningún oponente.'}, room=creador_sid)
+        del salas[sala_id]
+    elif sala_id in salas:
+        logging.info(f"Sala {sala_id} no cerrada, se unieron otros jugadores.")
 
 
 @sio.event
@@ -14,21 +30,33 @@ def connect(sid, environ):
 @sio.event
 def crear_sala(sid, data):
     nombre = data.get('nombre', 'Anónimo')
+    if sid in clientes_con_sala_creada:
+        sio.emit('error', {'mensaje': 'Ya tienes una sala creada.'}, room=sid)
+        return
     sala_id = f"sala_{len(salas) + 1}"
     jugador = Jugador(nombre)
-    salas[sala_id] = {'jugadores': [jugador], 'sids': [sid], 'listo': []}
+    salas[sala_id]['creador_sid'] = sid
+    salas[sala_id]['jugadores'].append(jugador)
+    salas[sala_id]['sids'].append(sid)
+    clientes_con_sala_creada[sid] = sala_id
     sio.enter_room(sid, sala_id)
-    print(f"\nSala creada: {sala_id}, Jugador: {nombre}\n")
+    print(f"\nSala creada: {sala_id} por {nombre}\n")
     sio.emit('sala_creada', {'sala_id': sala_id}, room=sid)
+    sio.start_background_task(cerrar_sala_por_inactividad, sala_id)
 
 
 @sio.event
 def listar_salas(sid):
-    lista_salas = [
-        {"sala_id": sala_id, "jugadores": [jug.obtener_nombre() for jug in data["jugadores"]]}
-        for sala_id, data in salas.items()
-        if len(data["jugadores"]) < 2
-    ]
+    if sid in clientes_con_sala_creada:
+        sio.emit('ya_tiene_sala', {'mensaje': 'Ya tienes una sala creada, debes esperar a que se una un oponente...'}, room=sid)
+        return
+    lista_salas = []
+    for sala_id, data in salas.items():
+        if data['creador_sid'] != sid and len(data['jugadores']) < 2:
+            lista_salas.append({
+                "sala_id": sala_id,
+                "jugadores": [jug.obtener_nombre() for jug in data["jugadores"]]
+            })
     sio.emit('lista_salas', lista_salas, room=sid)
 
 
@@ -47,8 +75,6 @@ def unirse_a_sala(sid, data):
 
     jugador = Jugador(nombre)
     salas[sala_id]['jugadores'].append(jugador)
-    if 'sids' not in salas[sala_id]:
-        salas[sala_id]['sids'] = [salas[sala_id]['jugadores'][0].__dict__.get('_Jugador__nombre') == salas[sala_id]['jugadores'][0].obtener_nombre()]
     salas[sala_id]['sids'].append(sid)
     sio.enter_room(sid, sala_id)
     print(f"\nJugador {nombre} unido a la sala {sala_id}")
@@ -92,6 +118,12 @@ def lanzar_dados(sid, data):
 @sio.event
 def disconnect(sid):
     print(f"Cliente desconectado: {sid}")
+    if sid in clientes_con_sala_creada:
+        sala_id_creada = clientes_con_sala_creada.pop(sid)
+        if sala_id_creada in salas:
+            print(f"El creador de la sala {sala_id_creada} ({sid}) se desconectó.")
+            del salas[sala_id_creada]
+            sio.emit('sala_cerrada_inactividad', {'mensaje': 'El creador de la sala se desconectó.'}, room=sala_id_creada)
     for sala_id, data in list(salas.items()):
         if sid in data['sids']:
             print(f"El cliente {sid} se desconectó de la sala {sala_id}")
@@ -110,5 +142,5 @@ if __name__ == '__main__':
     app = socketio.WSGIApp(sio)
     import eventlet
 
-    print("\nServidor iniciado en http://127.0.0.1:5000\n")
+    print(f"\nServidor iniciado en http://127.0.0.1:5000 (Tiempo de espera para salas: {tiempo_de_espera_conexion_oponente} segundos)\n")
     eventlet.wsgi.server(eventlet.listen(('127.0.0.1', 5000)), app)

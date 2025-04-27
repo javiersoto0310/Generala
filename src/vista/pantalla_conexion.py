@@ -3,7 +3,7 @@
 ################################################################################
 ## Form generated from reading UI file 'pantalla_conexion.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.8.3
+## Created by: Qt User Interface Compiler version 6.8.2
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -15,9 +15,9 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QFont, QFontDatabase, QGradient, QIcon,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
-from PySide6.QtWidgets import (QApplication, QLineEdit, QMainWindow, QMenuBar,
-    QPushButton, QSizePolicy, QStatusBar, QTextEdit,
-    QVBoxLayout, QWidget)
+from PySide6.QtWidgets import (QApplication, QLineEdit, QListWidget, QListWidgetItem,
+    QMainWindow, QMenuBar, QPushButton, QSizePolicy,
+    QStatusBar, QTextEdit, QVBoxLayout, QWidget)
 
 class Conexion(object):
     def setupUi(self, MainWindow):
@@ -48,10 +48,10 @@ class Conexion(object):
 
         self.verticalLayout.addWidget(self.btn_unirse_a_sala)
 
-        self.entrada_id_sala = QLineEdit(self.centralwidget)
-        self.entrada_id_sala.setObjectName(u"entrada_id_sala")
+        self.lista_salas_disponibles = QListWidget(self.centralwidget)
+        self.lista_salas_disponibles.setObjectName(u"lista_salas_disponibles")
 
-        self.verticalLayout.addWidget(self.entrada_id_sala)
+        self.verticalLayout.addWidget(self.lista_salas_disponibles)
 
         self.btn_listar_salas = QPushButton(self.centralwidget)
         self.btn_listar_salas.setObjectName(u"btn_listar_salas")
@@ -82,7 +82,6 @@ class Conexion(object):
         self.entrada_nombre.setPlaceholderText(QCoreApplication.translate("MainWindow", u"Ingrese su nombre", None))
         self.btn_crear_sala.setText(QCoreApplication.translate("MainWindow", u"Crear Sala", None))
         self.btn_unirse_a_sala.setText(QCoreApplication.translate("MainWindow", u"Unirse a Sala", None))
-        self.entrada_id_sala.setPlaceholderText(QCoreApplication.translate("MainWindow", u"Ingrese ID de la sala", None))
         self.btn_listar_salas.setText(QCoreApplication.translate("MainWindow", u"Listar Salas Disponibles", None))
         self.btn_ranking.setText(QCoreApplication.translate("MainWindow", u"Ranking", None))
     # retranslateUi

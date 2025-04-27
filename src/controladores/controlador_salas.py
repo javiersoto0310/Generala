@@ -12,6 +12,7 @@ class ControladorSalas(QObject):
     mostrar_salas = Signal(list)
     iniciar_partida_signal = Signal(list, str)
     nombre_jugador_actual = None
+    mostrar_mensaje = Signal(str)
 
     def __init__(self):
         super().__init__()
@@ -51,6 +52,16 @@ class ControladorSalas(QObject):
                 self.error.emit("Error al recibir la lista de salas")
 
         @self.cliente.event
+        def ya_tiene_sala(data):
+            if 'mensaje' in data:
+                self.mostrar_mensaje.emit(data['mensaje'])
+
+        @self.cliente.event
+        def sala_cerrada_inactividad(data):
+            if 'mensaje' in data:
+                self.mostrar_mensaje.emit(data['mensaje'])
+
+        @self.cliente.event
         def esperar_inicio(data):
             if 'sala_id' in data:
                 logging.info(f"Esperando inicio en la sala: {data['sala_id']}")
@@ -78,6 +89,7 @@ class ControladorSalas(QObject):
                 jugadores = data['jugadores']
                 primer_jugador = data['primer_jugador']
                 self.mostrar_juego.emit(sala_id, jugadores,primer_jugador)
+            else:
                 logging.warning(f"Evento 'iniciar_juego' recibido con datos incompletos: {data}")
 
         @self.cliente.event
@@ -115,16 +127,15 @@ class ControladorSalas(QObject):
         except Exception as e:
             self.error.emit(f"Error al listar salas: {str(e)}")
 
-    def unirse_a_sala(self):
+    def unirse_a_sala(self, sala_id: str):
         if not self.cliente.connected:
             self.error.emit("No hay conexión con el servidor")
             return
 
         nombre = self.ui.entrada_nombre.text().strip()
-        sala_id = self.ui.entrada_id_sala.text().strip()
 
         if not nombre or not sala_id:
-            self.error.emit("Debe ingresar nombre y ID de sala")
+            self.error.emit("Debe ingresar un nombre y seleccionar una sala")
             return
         self.nombre_jugador_actual = nombre
         try:
@@ -134,4 +145,3 @@ class ControladorSalas(QObject):
             })
         except Exception as e:
             self.error.emit(f"Error al unirse a sala: {str(e)}")
-
