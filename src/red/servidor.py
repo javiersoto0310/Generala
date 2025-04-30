@@ -7,7 +7,7 @@ from modelo.jugador import Jugador
 sio = socketio.Server(cors_allowed_origins='*')
 salas = defaultdict(lambda: {'creador_sid': None, 'jugadores': [], 'sids': [], 'listo': []})
 clientes_con_sala_creada = {}
-tiempo_de_espera_conexion_oponente = 20
+tiempo_de_espera_conexion_oponente = 30
 
 
 def cerrar_sala_por_inactividad(sala_id):
@@ -137,6 +137,14 @@ def disconnect(sid):
                 sio.emit('jugador_desconectado', {'sid': sid}, room=sala_id)
             break
 
+@sio.event
+def actualizar_puntajes(sid, data):
+    sala_id = data.get('sala_id')
+    if sala_id in salas:
+        sio.emit('actualizar_puntajes', {
+            'sala_id': sala_id,
+            'puntajes': data['puntajes']
+        }, room=sala_id)
 
 if __name__ == '__main__':
     app = socketio.WSGIApp(sio)

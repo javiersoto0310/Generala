@@ -1,64 +1,73 @@
-from typing import Optional
+from typing import Optional, Dict, List
 from modelo.jugador import Jugador
+import logging
+
+logging.basicConfig(level=logging.INFO)
+
 
 class Puntaje:
-
     categorias_ordenadas = [
-        "Doble Generala", "Generala", "Póker", "Full", "Escalera", "6", "5", "4", "3", "2", "1"
+        "1", "2", "3", "4", "5", "6",
+        "Escalera", "Full", "Póker", "Generala", "Doble Generala"
     ]
 
-    def __init__(self, nombres_jugadores: list, cliente):
-        self.__jugadores = [Jugador(nombre) for nombre in nombres_jugadores]
-        self.__puntajes_por_categoria = {jugador.obtener_nombre(): {} for jugador in self.__jugadores}
-        self.__categorias_usadas = {jugador.obtener_nombre(): set() for jugador in self.__jugadores}
+    def __init__(self, nombres_jugadores: List[str]):
+        self._jugadores = {nombre: Jugador(nombre) for nombre in nombres_jugadores}
+        self._puntajes = {nombre: {} for nombre in nombres_jugadores}
+        self._categorias_usadas = {nombre: set() for nombre in nombres_jugadores}
+        self.cliente = None
+
+    def set_cliente(self, cliente):
         self.cliente = cliente
 
-    def registrar_puntos(self, nombre_jugador: str, puntos: int, categoria: str):
-        jugador = self._obtener_jugador_por_nombre(nombre_jugador)
+    def registrar_puntos(self, nombre_jugador: str, categoria: str, puntos: int) -> None:
+        if nombre_jugador not in self._jugadores:
+            raise ValueError(f"Jugador {nombre_jugador} no existe")
 
-        if categoria not in self.__categorias_usadas[nombre_jugador]:
-            if categoria == "Doble Generala" and "Generala" not in self.__categorias_usadas[nombre_jugador]:
-                if puntos != 0:
-                    raise ValueError("Debes marcar Generala antes de marcar Doble Generala")
-            self.__categorias_usadas[nombre_jugador].add(categoria)
-            jugador.actualizar_puntaje(puntos)
-            self.__puntajes_por_categoria[nombre_jugador][categoria] = puntos
-            self.cliente.emit('actualizar_puntajes', {'puntajes': self.obtener_puntajes()})
-        else:
-            raise ValueError(f"Categoría {categoria} ya utilizada por {nombre_jugador}")
+        if categoria in self._categorias_usadas[nombre_jugador]:
+            raise ValueError(f"Categoría {categoria} ya fue utilizada por {nombre_jugador}")
 
-    def obtener_puntaje_jugador(self, nombre_jugador: str) -> int:
-        jugador = self._obtener_jugador_por_nombre(nombre_jugador)
-        return jugador.obtener_puntaje()
+        if categoria == "Doble Generala" and "Generala" not in self._categorias_usadas[nombre_jugador]:
+            raise ValueError("Debes marcar Generala antes de marcar Doble Generala")
 
-    def obtener_categorias_usadas(self, nombre_jugador: str) -> set:
-        return self.__categorias_usadas.get(nombre_jugador, set())
+        self._puntajes[nombre_jugador][categoria] = puntos
+        self._categorias_usadas[nombre_jugador].add(categoria)
+        self._jugadores[nombre_jugador].actualizar_puntaje(puntos)
 
-    def obtener_puntaje_categoria(self, nombre_jugador: str, categoria: str) -> int:
-        return self.__puntajes_por_categoria[nombre_jugador].get(categoria, 0)
+        logging.info(f"Puntos registrados - Jugador: {nombre_jugador}, Categoría: {categoria}, Puntos: {puntos}")
 
-    def determinar_ganador(self) -> str:
-        return max(self.__jugadores, key=lambda jugador: jugador.obtener_puntaje()).obtener_nombre()
+    def obtener_puntaje_total(self, nombre_jugador: str) -> int:
+        return self._jugadores[nombre_jugador].obtener_puntaje()
 
-    def encontrar_primer_categoria_no_completada(self, nombre_jugador: str) -> Optional[str]:
+    def obtener_puntaje_categoria(self, nombre_jugador: str, categoria: str) -> Optional[int]:
+        return self._puntajes[nombre_jugador].get(categoria)
+
+    def ha_usado_categoria(self, nombre_jugador: str, categoria: str) -> bool:
+        return categoria in self._categorias_usadas[nombre_jugador]
+
+    def obtener_categorias_disponibles(self, nombre_jugador: str) -> List[str]:
+        return [cat for cat in self.categorias_ordenadas if cat not in self._categorias_usadas[nombre_jugador]]
+
+    def obtener_primer_categoria_disponible(self, nombre_jugador: str) -> Optional[str]:
         for categoria in self.categorias_ordenadas:
-            if categoria not in self.__categorias_usadas[nombre_jugador]:
+            if not self.ha_usado_categoria(nombre_jugador, categoria):
                 return categoria
         return None
 
-    def _obtener_jugador_por_nombre(self, nombre: str) -> Jugador:
-        for jugador in self.__jugadores:
-            if jugador.obtener_nombre() == nombre:
-                return jugador
-        raise ValueError(f"Jugador {nombre} no existe")
+    def determinar_ganador(self) -> str:
+        return max(self._jugadores.values(), key=lambda j: j.obtener_puntaje()).obtener_nombre()
 
-    def cargar_desde_dict(self, datos):
-        self.__puntajes_por_categoria = datos
-        self.__jugadores = []
-        self.__categorias_usadas = {}
-        for nombre_jugador, puntajes_categoria in datos.items():
-            self.__jugadores.append(Jugador(nombre_jugador, sum(puntajes_categoria.values())))
-            self.__categorias_usadas[nombre_jugador] = set(puntajes_categoria.keys())
+    def obtener_puntajes(self) -> Dict[str, Dict[str, int]]:
+        return self._puntajes.copy()
 
-    def obtener_puntajes(self):
-        return self.__puntajes_por_categoria
+    def cargar_estado(self, estado: Dict[str, Dict[str, int]]) -> None:
+        self._puntajes = estado
+        self._categorias_usadas = {
+            jugador: set(puntajes.keys())
+            for jugador, puntajes in estado.items()
+        }
+
+        for nombre, jugador in self._jugadores.items():
+            jugador.actualizar_puntaje(-jugador.obtener_puntaje())  # Resetear
+            for puntos in estado[nombre].values():
+                jugador.actualizar_puntaje(puntos)

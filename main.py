@@ -27,6 +27,8 @@ class MainApp(QObject):
 
         self.controlador_salas = ControladorSalas()
         self.controlador_juego = ControladorJuego()
+
+
         self.controlador_juego.set_cliente(self.controlador_salas.cliente)
 
         self.controlador_salas.ui = self.ui_conexion
@@ -110,8 +112,9 @@ class MainApp(QObject):
         self.ventana_conexion.hide()
 
         self.ventana_juego = JuegoVentana(self.controlador_juego)
-        self.ventana_juego.setWindowTitle(
-            f"Generala - Sala: {sala_id} - Jugador: {self.controlador_salas.nombre_jugador_actual}")
+        self.controlador_juego.set_vista(self.ventana_juego)
+        self.ventana_juego.setWindowTitle(f"Generala - Sala: {sala_id} - Jugador: {self.controlador_salas.nombre_jugador_actual}")
+        self.ventana_juego.configurar_tabla_puntajes(jugadores)
 
         self.ventana_juego.lanzar_dados_btn.clicked.connect(self.controlador_juego.lanzar_dados)
 

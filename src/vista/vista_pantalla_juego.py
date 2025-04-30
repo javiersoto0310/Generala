@@ -1,4 +1,5 @@
-from PySide6.QtWidgets import QMainWindow, QPushButton, QLabel
+from PySide6.QtCore import Qt
+from PySide6.QtWidgets import QMainWindow, QPushButton, QLabel, QTableWidgetItem, QAbstractItemView, QHeaderView
 from vista.pantalla_juego import PantallaJuego
 from vista.estilo_pantalla_juego import Estilo
 import logging
@@ -40,6 +41,8 @@ class JuegoVentana(QMainWindow, PantallaJuego):
         print(f"¿tirada1 es visible? {self.tirada1.isVisible()}")
 
         self.configurar_clicks_dados()
+
+        self.configurar_handlers()
         logging.info("Ventana de juego inicializada correctamente")
 
         if controlador:
@@ -52,6 +55,10 @@ class JuegoVentana(QMainWindow, PantallaJuego):
             controlador.deshabilitar_categorias.connect(self.deshabilitar_categorias)
 
         self.deshabilitar_categorias()
+
+        self.conectar_botones_categorias()
+
+        self.configurar_tabla_puntajes()
 
     def actualizar_mensaje_tiradas_agotadas(self, tiradas_restantes):
         if self.controlador and hasattr(self.controlador, 'turno') and hasattr(self.controlador.turno, 'obtener_jugador_actual') and hasattr(self.controlador, 'jugador_actual'):
@@ -144,24 +151,145 @@ class JuegoVentana(QMainWindow, PantallaJuego):
                     self.poker, self.generala, self.generala_doble]:
             btn.setEnabled(False)
 
-    def seleccionar_categoria(self, categoria: str):
-        if not (self.controlador
-                and hasattr(self.controlador, 'tirada_realizada')
-                and self.controlador.tirada_realizada):
-            return
+    def conectar_botones_categorias(self):
+        self.uno.clicked.connect(lambda: self.seleccionar_categoria("1"))
+        self.dos.clicked.connect(lambda: self.seleccionar_categoria("2"))
+        self.tres.clicked.connect(lambda: self.seleccionar_categoria("3"))
+        self.cuatro.clicked.connect(lambda: self.seleccionar_categoria("4"))
+        self.cinco.clicked.connect(lambda: self.seleccionar_categoria("5"))
+        self.seis.clicked.connect(lambda: self.seleccionar_categoria("6"))
+        self.escalera.clicked.connect(lambda: self.seleccionar_categoria("Escalera"))
+        self.full.clicked.connect(lambda: self.seleccionar_categoria("Full"))
+        self.poker.clicked.connect(lambda: self.seleccionar_categoria("Póker"))
+        self.generala.clicked.connect(lambda: self.seleccionar_categoria("Generala"))
+        self.generala_doble.clicked.connect(lambda: self.seleccionar_categoria("Doble Generala"))
 
-        jugador_local = self.controlador.jugador_actual.obtener_nombre()
-        jugador_turno_actual = self.controlador.turno.obtener_jugador_actual()
-        if jugador_local != jugador_turno_actual:
+    def seleccionar_categoria(self, categoria: str):
+        if not (self.controlador and hasattr(self.controlador, 'tirada_realizada')) \
+                or not self.controlador.tirada_realizada:
             return
 
         try:
-            self.controlador.calcular_puntos_para_categoria(
+            jugador_local = self.controlador.jugador_actual.obtener_nombre()
+            jugador_turno_actual = self.controlador.turno.obtener_jugador_actual()
+
+            if jugador_local != jugador_turno_actual:
+                return
+
+            puntos = self.controlador.calcular_puntos_para_categoria(
                 dados=self.controlador.dados_actuales,
                 categoria=categoria
             )
+
+            self.actualizar_tabla_puntajes(self.controlador.puntaje.obtener_puntajes())
+
             self.controlador.pasar_turno()
 
         except (AttributeError, ValueError) as e:
-            if hasattr(self, 'mostrar_error_sutil'):
-                self.mostrar_error_sutil(f"Error: {str(e)}")
+            logging.error(f"Error al seleccionar categoría: {str(e)}")
+
+    def actualizar_tabla_puntajes(self, puntajes: dict):
+        try:
+            categoria_a_fila = {
+                "1": 0, "2": 1, "3": 2, "4": 3, "5": 4, "6": 5,
+                "Escalera": 6, "Full": 7, "Póker": 8,
+                "Generala": 9, "Doble Generala": 10
+            }
+
+            for i in range(self.tabla_puntajes.rowCount()):
+                for j in range(self.tabla_puntajes.columnCount()):
+                    self.tabla_puntajes.setItem(i, j, QTableWidgetItem(""))
+
+            for jugador, categorias in puntajes.items():
+                columna = 0 if jugador == self.controlador.jugadores[0].obtener_nombre() else 1
+                for categoria, puntos in categorias.items():
+                    fila = categoria_a_fila.get(categoria)
+                    if fila is not None:
+                        item = QTableWidgetItem(str(puntos))
+                        item.setTextAlignment(Qt.AlignCenter)
+                        self.tabla_puntajes.setItem(fila, columna, item)
+
+            self.calcular_puntuacion_total()
+            self.tabla_puntajes.viewport().update()
+
+        except Exception as e:
+            logging.error(f"Error al actualizar tabla: {str(e)}")
+
+    def calcular_puntuacion_total(self):
+        if not hasattr(self, 'tabla_puntajes'):
+            return
+
+        for col in range(self.tabla_puntajes.columnCount()):
+            total = 0
+            for row in range(11):
+                item = self.tabla_puntajes.item(row, col)
+                if item and item.text().isdigit():
+                    total += int(item.text())
+
+            total_item = QTableWidgetItem(str(total))
+            total_item.setTextAlignment(Qt.AlignCenter)
+            self.tabla_puntajes.setItem(11, col, total_item)
+
+    def configurar_tabla_puntajes(self, nombres_jugadores=None):
+        if not hasattr(self, 'tabla_puntajes'):
+            return
+
+        if nombres_jugadores and len(nombres_jugadores) >= 2:
+            nombre_jugador1, nombre_jugador2 = nombres_jugadores[:2]
+        elif hasattr(self, 'controlador') and self.controlador:
+            nombre_jugador1 = "Jugador 1"
+            nombre_jugador2 = "Jugador 2"
+
+            if hasattr(self.controlador, 'jugadores'):
+                if len(self.controlador.jugadores) > 0:
+                    nombre_jugador1 = self.controlador.jugadores[0].obtener_nombre()
+                if len(self.controlador.jugadores) > 1:
+                    nombre_jugador2 = self.controlador.jugadores[1].obtener_nombre()
+        else:
+            nombre_jugador1 = "Jugador 1"
+            nombre_jugador2 = "Jugador 2"
+
+        if self.tabla_puntajes.columnCount() < 2:
+            self.tabla_puntajes.setColumnCount(2)
+
+        self.tabla_puntajes.setHorizontalHeaderItem(0, QTableWidgetItem(nombre_jugador1))
+        self.tabla_puntajes.setHorizontalHeaderItem(1, QTableWidgetItem(nombre_jugador2))
+        self.tabla_puntajes.setEditTriggers(QAbstractItemView.NoEditTriggers)
+        self.tabla_puntajes.setSelectionMode(QAbstractItemView.NoSelection)
+        self.tabla_puntajes.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        self.tabla_puntajes.viewport().update()
+
+    def ha_marcado_categoria(self, jugador: str, categoria: str) -> bool:
+        if not hasattr(self, 'tabla_puntajes'):
+            return False
+
+        categoria_a_fila = {
+            "1": 0, "2": 1, "3": 2, "4": 3, "5": 4, "6": 5,
+            "Escalera": 6, "Full": 7, "Póker": 8,
+            "Generala": 9, "Generala Doble": 10
+        }
+
+        fila = categoria_a_fila.get(categoria, -1)
+        if fila == -1:
+            return False
+
+        jugadores = []
+        if hasattr(self, 'controlador') and hasattr(self.controlador, 'jugadores'):
+            jugadores = [j.obtener_nombre() for j in self.controlador.jugadores]
+
+        if jugador not in jugadores:
+            return False
+
+        columna = jugadores.index(jugador)
+        item = self.tabla_puntajes.item(fila, columna)
+
+        return item is not None and item.text().isdigit() and int(item.text()) > 0
+
+    def configurar_handlers(self):
+        if self.controlador and hasattr(self.controlador, 'cliente'):
+            @self.controlador.cliente.on('actualizar_puntajes')
+            def on_actualizar_puntajes(data):
+                logging.info(
+                    f"Recibido 'actualizar_puntajes' - Sala ID recibido: {data.get('sala_id')}, Sala ID local: {self.controlador.sala_id_actual}")
+                if data.get('sala_id') == self.controlador.sala_id_actual:
+                    self.actualizar_tabla_puntajes(data['puntajes'])
