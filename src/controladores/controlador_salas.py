@@ -8,9 +8,8 @@ logging.basicConfig(level=logging.INFO)
 class ControladorSalas(QObject):
     mostrar_juego = Signal(str, list, str)
     error = Signal(str)
-    conexion_exitosa = Signal()
+    conexion_exitosa = Signal(dict)
     mostrar_salas = Signal(list)
-    iniciar_partida_signal = Signal(list, str)
     nombre_jugador_actual = None
     mostrar_mensaje = Signal(str)
 
@@ -27,9 +26,11 @@ class ControladorSalas(QObject):
         @self.cliente.event
         def connect():
             logging.info("Conectado al servidor")
-            self.conexion_exitosa.emit()
-            if self.ui and self.ui.entrada_nombre.text():
-                self.nombre_jugador_actual = self.ui.entrada_nombre.text().strip()
+            datos_conexion = {
+                'sid': self.cliente.sid,
+                'nombre_jugador': self.ui.entrada_nombre.text().strip() if self.ui else None
+            }
+            self.conexion_exitosa.emit(datos_conexion)
 
         @self.cliente.event
         def connect_error(data):
@@ -102,46 +103,60 @@ class ControladorSalas(QObject):
                     data.get('tiradas_restantes')
                 )
 
-    def crear_sala(self):
+    def crear_sala(self, nombre: str):
         if not self.cliente.connected:
             self.error.emit("No hay conexión con el servidor")
             return
-
-        nombre = self.ui.entrada_nombre.text().strip()
+        nombre = nombre.strip()
         if not nombre:
-            self.error.emit("Debe ingresar un nombre")
+            self.error.emit("Debe ingresar un nombre válido")
             return
-        self.nombre_jugador_actual = nombre
+        if len(nombre) > 15:
+            self.error.emit("Nombre muy largo (máx. 15 caracteres)")
+            return
         try:
+            self.nombre_jugador_actual = nombre
             self.cliente.emit('crear_sala', {'nombre': nombre})
+            self.mostrar_mensaje.emit("Sala creada. Esperando oponente...")
         except Exception as e:
             self.error.emit(f"Error al crear sala: {str(e)}")
 
-    def listar_salas(self):
+    def listar_salas(self, nombre: str = None):
         if not self.cliente.connected:
-            self.error.emit("No hay conexión con el servidor")
+            self.error.emit("Error: No hay conexión con el servidor")
+            return
+
+        if nombre is not None and not nombre.strip():
+            self.error.emit("Error: Debe ingresar un nombre válido")
             return
 
         try:
             self.cliente.emit('listar_salas')
+            if nombre is not None:
+                self.mostrar_mensaje.emit("Buscando salas disponibles...")
         except Exception as e:
             self.error.emit(f"Error al listar salas: {str(e)}")
 
-    def unirse_a_sala(self, sala_id: str):
+    def unirse_a_sala(self, sala_id: str, nombre: str):
         if not self.cliente.connected:
             self.error.emit("No hay conexión con el servidor")
             return
 
-        nombre = self.ui.entrada_nombre.text().strip()
-
-        if not nombre or not sala_id:
-            self.error.emit("Debe ingresar un nombre y seleccionar una sala")
+        nombre = nombre.strip()
+        if not nombre:
+            self.error.emit("Debe ingresar un nombre válido")
             return
-        self.nombre_jugador_actual = nombre
+
+        if not sala_id:
+            self.error.emit("Sala no válida")
+            return
+
         try:
+            self.nombre_jugador_actual = nombre
             self.cliente.emit('unirse_a_sala', {
                 'nombre': nombre,
                 'sala_id': sala_id
             })
+            self.mostrar_mensaje.emit(f"Uniéndose a sala {sala_id}...")
         except Exception as e:
             self.error.emit(f"Error al unirse a sala: {str(e)}")

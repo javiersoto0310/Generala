@@ -55,7 +55,6 @@ class Estilo:
 
     def actualizar_imagen_tirada(self, tiradas_restantes):
         try:
-            print(f"Actualizando tiradas (restantes: {tiradas_restantes})")
             tiradas_realizadas = 3 - tiradas_restantes
 
             for i, label in enumerate([self.ventana_juego.tirada1,
@@ -65,12 +64,10 @@ class Estilo:
                     print(f"Error: Label tirada{i} no existe!")
                     continue
 
-                print(f"Procesando tirada{i}")
                 if i <= tiradas_realizadas:
                     img_path = f"recursos/img/tirada{i}.png"
-                    print(f"Cargando imagen: {img_path}")  # Debug
-
                     pixmap = QPixmap(img_path)
+
                     if pixmap.isNull():
                         print(f"Error: No se pudo cargar {img_path}")
                         label.setText(f"Tirada {i}")
@@ -84,7 +81,6 @@ class Estilo:
                 else:
                     label.clear()
         except Exception as e:
-            print(f"Error crítico en actualizar_imagen_tirada: {str(e)}")
             logging.error(f"Error en actualizar_imagen_tirada: {str(e)}")
 
     def aplicar_estilo_seleccionado(self, indice_dado, seleccionado):
@@ -92,15 +88,17 @@ class Estilo:
         if indice_dado < len(self.dados_labels) and self.dados_labels[indice_dado]:
             self.dados_labels[indice_dado].setStyleSheet(estilo)
 
-    def resetear_estilos_dados(self):
-        for lbl in self.dados_labels:
-            if lbl:
-                lbl.setStyleSheet("border: none;")
-
     def limpiar_dados(self):
         for lbl in self.dados_labels:
             if lbl:
                 lbl.clear()
+                lbl.setStyleSheet("")
+
+    def resetear_estilos_dados(self):
+        for lbl in self.dados_labels:
+            if lbl:
+                lbl.setStyleSheet("")
+                lbl.setProperty("bloqueado", False)
 
     def limpiar_tiradas(self):
         if self.ventana_juego:

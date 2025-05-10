@@ -28,7 +28,6 @@ class MainApp(QObject):
         self.controlador_salas = ControladorSalas()
         self.controlador_juego = ControladorJuego()
 
-
         self.controlador_juego.set_cliente(self.controlador_salas.cliente)
 
         self.controlador_salas.ui = self.ui_conexion
@@ -36,6 +35,17 @@ class MainApp(QObject):
         self.ui_conexion.btn_crear_sala.clicked.connect(self.crear_sala)
         self.ui_conexion.btn_unirse_a_sala.clicked.connect(self.unirse_a_sala_seleccionada)
         self.ui_conexion.btn_listar_salas.clicked.connect(self.solicitar_lista_salas)
+
+        self.ventana_juego = JuegoVentana(self.controlador_juego)
+        self.controlador_juego.set_vista(self.ventana_juego)
+        self.ventana_juego.lanzar_dados_btn.clicked.connect(self.controlador_juego.lanzar_dados)
+        self.controlador_juego.cambio_turno_signal.connect(self.ventana_juego.manejar_cambio_turno)
+        self.controlador_juego.habilitar_lanzamiento.connect(self.ventana_juego.habilitar_boton_lanzar, Qt.QueuedConnection)
+        self.controlador_juego.deshabilitar_lanzamiento.connect(self.ventana_juego.deshabilitar_boton_lanzar, Qt.QueuedConnection)
+        self.controlador_juego.actualizar_tiradas_restantes.connect(self.ventana_juego.estilo.actualizar_imagen_tirada)
+        self.controlador_juego.actualizar_tiradas_restantes.connect(self.ventana_juego.actualizar_mensaje_tiradas_agotadas)
+        self.controlador_juego.mostrar_resultados_lanzamiento.connect(self.ventana_juego.actualizar_dados_lanzados, Qt.QueuedConnection)
+        self.controlador_juego.habilitar_categorias.connect(self.ventana_juego.habilitar_categorias)
 
         self.controlador_salas.mostrar_juego.connect(self.mostrar_ventana_juego, Qt.QueuedConnection)
         self.controlador_salas.conexion_exitosa.connect(self.on_conexion_exitosa, Qt.QueuedConnection)
@@ -46,46 +56,34 @@ class MainApp(QObject):
         self.ventana_conexion.show()
         sys.exit(self.app.exec())
 
-
     def mostrar_mensaje_area(self, mensaje: str):
         self.ui_conexion.area_mensajes.setText(mensaje)
 
     def mostrar_error(self, mensaje: str):
         self.ui_conexion.area_mensajes.setText(mensaje)
 
-    def on_conexion_exitosa(self):
+    def on_conexion_exitosa(self, datos_conexion: dict):
         self.ui_conexion.area_mensajes.setText("Conectado al servidor")
+        self.controlador_juego.set_jugador_sid_local(datos_conexion['sid'])
+        if datos_conexion['nombre_jugador']:
+            self.controlador_salas.nombre_jugador_actual = datos_conexion['nombre_jugador']
+        logging.info(f"Conexión establecida. SID: {datos_conexion['sid']}")
 
     def crear_sala(self):
-        nombre = self.ui_conexion.entrada_nombre.text().strip()
-        if not nombre:
-            self.mostrar_error("Debe ingresar su nombre")
-            return
-
-        if not self.controlador_salas.cliente.connected:
-            self.mostrar_error("Espere a establecer conexión con el servidor")
-            return
-
-        self.ui_conexion.area_mensajes.setText("Sala creada, esperando oponente....")
-        self.controlador_salas.crear_sala()
+        self.controlador_salas.crear_sala(
+            nombre=self.ui_conexion.entrada_nombre.text().strip()
+        )
 
     def unirse_a_sala_seleccionada(self):
-        nombre = self.ui_conexion.entrada_nombre.text().strip()
-        if not nombre:
-            self.mostrar_error("Debe ingresar su nombre")
-            return
-
-        if not self.controlador_salas.cliente.connected:
-            self.mostrar_error("Espere a establecer conexión con el servidor")
-            return
-
         sala_seleccionada = self.ui_conexion.lista_salas_disponibles.currentItem()
-        if sala_seleccionada:
-            sala_id = sala_seleccionada.data(Qt.UserRole)
-            self.ui_conexion.area_mensajes.setText(f"Intentando unirse a la sala: {sala_id}...")
-            self.controlador_salas.unirse_a_sala(sala_id)
-        else:
-            self.mostrar_error("Debe seleccionar una sala para unirse.")
+        if not sala_seleccionada:
+            self.mostrar_mensaje_area("Debe seleccionar una sala para unirse.")
+            return
+
+        self.controlador_salas.unirse_a_sala(
+            sala_id=sala_seleccionada.data(Qt.UserRole),
+            nombre=self.ui_conexion.entrada_nombre.text().strip()
+        )
 
     def mostrar_salas_en_lista(self, lista_salas: List[dict]):
         self.ui_conexion.lista_salas_disponibles.clear()
@@ -95,38 +93,20 @@ class MainApp(QObject):
             self.ui_conexion.lista_salas_disponibles.addItem(item)
 
     def solicitar_lista_salas(self):
-        nombre = self.ui_conexion.entrada_nombre.text().strip()
-        if not nombre:
-            self.mostrar_error("Debe ingresar su nombre")
-            return
-
-        if not self.controlador_salas.cliente.connected:
-            self.mostrar_error("Espere a establecer conexión con el servidor")
-            return
-
-        self.ui_conexion.area_mensajes.setText("Listando salas disponibles...")
-        self.controlador_salas.listar_salas()
+        self.controlador_salas.listar_salas(
+            nombre=self.ui_conexion.entrada_nombre.text().strip()
+        )
 
     def mostrar_ventana_juego(self, sala_id: str, jugadores: List[str], primer_jugador: str):
         logging.info(f"Mostrando pantalla de juego para la sala: {sala_id} con jugadores: {jugadores}")
         self.ventana_conexion.hide()
 
-        self.ventana_juego = JuegoVentana(self.controlador_juego)
-        self.controlador_juego.set_vista(self.ventana_juego)
         self.ventana_juego.setWindowTitle(f"Generala - Sala: {sala_id} - Jugador: {self.controlador_salas.nombre_jugador_actual}")
         self.ventana_juego.configurar_tabla_puntajes(jugadores)
-
-        self.ventana_juego.lanzar_dados_btn.clicked.connect(self.controlador_juego.lanzar_dados)
-
-        self.controlador_juego.turno_actual_cambiado.connect(self.ventana_juego.actualizar_jugador_actual)
-        self.controlador_juego.habilitar_lanzamiento.connect(self.ventana_juego.habilitar_boton_lanzar, Qt.QueuedConnection)
-        self.controlador_juego.deshabilitar_lanzamiento.connect(self.ventana_juego.deshabilitar_boton_lanzar, Qt.QueuedConnection)
-        self.controlador_juego.actualizar_tiradas_restantes.connect(self.ventana_juego.estilo.actualizar_imagen_tirada)
-        self.controlador_juego.actualizar_tiradas_restantes.connect(self.ventana_juego.actualizar_mensaje_tiradas_agotadas)
-        self.controlador_juego.mostrar_resultados_lanzamiento.connect(self.ventana_juego.actualizar_dados_lanzados,Qt.QueuedConnection)
-        self.controlador_juego.iniciar_partida(jugadores,self.controlador_salas.nombre_jugador_actual,sala_id=sala_id, primer_jugador=primer_jugador)
+        self.controlador_juego.iniciar_partida(jugadores, self.controlador_salas.nombre_jugador_actual, sala_id=sala_id, primer_jugador=primer_jugador)
 
         self.ventana_juego.show()
+
 
 if __name__ == "__main__":
     app = MainApp()

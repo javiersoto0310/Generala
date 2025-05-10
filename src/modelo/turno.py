@@ -20,7 +20,6 @@ class Turno:
 
     def reiniciar_tiradas_restantes(self):
         self.__tiradas_restantes = 3
-        logging.info(f"Tiradas restantes reiniciadas para {self.__jugador_actual}.")
 
     def obtener_tiempo_restante(self) -> int:
         return self.__tiempo.obtener_tiempo_restante()
@@ -35,7 +34,6 @@ class Turno:
         self.__jugador_actual = jugador
         self.reiniciar_tiradas_restantes()
         self.__tiempo.reiniciar_tiempo()
-        logging.info(f"Turno reiniciado para {jugador}.")
 
     def pasar_turno_si_el_tiempo_se_agotado(self, puntaje: Puntaje, actualizar_tabla_puntajes):
         categoria = puntaje.encontrar_primer_categoria_no_completada(self.__jugador_actual)

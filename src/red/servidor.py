@@ -3,29 +3,19 @@ from collections import defaultdict
 import socketio
 from eventlet import wsgi, sleep
 from modelo.jugador import Jugador
+from modelo.puntaje import Puntaje
 
 sio = socketio.Server(cors_allowed_origins='*')
 salas = defaultdict(lambda: {'creador_sid': None, 'jugadores': [], 'sids': [], 'listo': []})
 clientes_con_sala_creada = {}
+puntajes_por_sala = {}
 tiempo_de_espera_conexion_oponente = 30
-
-
-def cerrar_sala_por_inactividad(sala_id):
-    sleep(tiempo_de_espera_conexion_oponente)
-    if sala_id in salas and not salas[sala_id]['jugadores'][1:]:
-        creador_sid = salas[sala_id]['creador_sid']
-        if creador_sid in clientes_con_sala_creada and clientes_con_sala_creada[creador_sid] == sala_id:
-            del clientes_con_sala_creada[creador_sid]
-        logging.info(f"Cerrando sala {sala_id} por inactividad.")
-        sio.emit('sala_cerrada_inactividad', {'mensaje': 'Sala cerrada, no se unió ningún oponente.'}, room=creador_sid)
-        del salas[sala_id]
-    elif sala_id in salas:
-        logging.info(f"Sala {sala_id} no cerrada, se unieron otros jugadores.")
 
 
 @sio.event
 def connect(sid, environ):
     print(f"\nCliente conectado: {sid}\n")
+
 
 @sio.event
 def crear_sala(sid, data):
@@ -40,7 +30,6 @@ def crear_sala(sid, data):
     salas[sala_id]['sids'].append(sid)
     clientes_con_sala_creada[sid] = sala_id
     sio.enter_room(sid, sala_id)
-    print(f"\nSala creada: {sala_id} por {nombre}\n")
     sio.emit('sala_creada', {'sala_id': sala_id}, room=sid)
     sio.start_background_task(cerrar_sala_por_inactividad, sala_id)
 
@@ -77,30 +66,36 @@ def unirse_a_sala(sid, data):
     salas[sala_id]['jugadores'].append(jugador)
     salas[sala_id]['sids'].append(sid)
     sio.enter_room(sid, sala_id)
-    print(f"\nJugador {nombre} unido a la sala {sala_id}")
-    print(f"Jugadores en la sala: {[jug.obtener_nombre() for jug in salas[sala_id]['jugadores']]}")
 
     if len(salas[sala_id]['jugadores']) == 2:
         nombres_en_sala = [jug.obtener_nombre() for jug in salas[sala_id]['jugadores']]
         primer_jugador = nombres_en_sala[0]
-        print(f"Emitiendo 'iniciar_juego' para la sala {sala_id} con jugadores: {nombres_en_sala}, primer jugador: {primer_jugador}")
-        sio.emit('iniciar_juego', {'sala_id': sala_id, 'jugadores': nombres_en_sala, 'primer_jugador': primer_jugador}, room=sala_id)
+
+        puntajes_por_sala[sala_id] = Puntaje(nombres_en_sala)
+
+        sio.emit('iniciar_juego', {
+            'sala_id': sala_id,
+            'jugadores': nombres_en_sala,
+            'primer_jugador': primer_jugador
+        }, room=sala_id)
 
     sio.emit('sala_unida', {'sala_id': sala_id}, room=sid)
+
 
 @sio.event
 def iniciar_juego(sid, data):
     sala_id = data.get('sala_id')
     sio.emit('esperar_inicio', {'sala_id': sala_id}, room=sala_id)
 
+
 @sio.event
 def cliente_listo(sid, data):
     sala_id = data.get('sala_id')
-    print(f"Cliente {sid} listo en la sala {sala_id}")
     if sid not in salas[sala_id]['listo']:
         salas[sala_id]['listo'].append(sid)
     if len(salas[sala_id]['jugadores']) == 2 and len(salas[sala_id]['listo']) == 2:
         sio.emit('juego_listo', {'sala_id': sala_id}, room=sala_id)
+
 
 @sio.event
 def lanzar_dados(sid, data):
@@ -108,47 +103,83 @@ def lanzar_dados(sid, data):
     resultados = data.get('resultados')
     tiradas_restantes = data.get('tiradas_restantes')
 
-    print(f"\nEl jugador {sid} en la sala {sala_id} ha lanzado los dados: {resultados} (quedan {tiradas_restantes} tiradas)\n")
+    jugador_nombre = None
+    for i, jugador_sid in enumerate(salas[sala_id]['sids']):
+        if sid == jugador_sid:
+            jugador_nombre = salas[sala_id]['jugadores'][i].obtener_nombre()
+            break
+
+    categorias_disponibles = []
+    if jugador_nombre and sala_id in puntajes_por_sala:
+        puntaje = puntajes_por_sala[sala_id]
+        categorias_disponibles = puntaje.obtener_categorias_disponibles(jugador_nombre)
+
     sio.emit('resultados_lanzamiento', {
         'jugador_sid': sid,
         'resultados': resultados,
-        'tiradas_restantes': tiradas_restantes
+        'tiradas_restantes': tiradas_restantes,
+        'categorias_disponibles': categorias_disponibles
     }, room=sala_id)
 
-@sio.event
-def disconnect(sid):
-    print(f"Cliente desconectado: {sid}")
-    if sid in clientes_con_sala_creada:
-        sala_id_creada = clientes_con_sala_creada.pop(sid)
-        if sala_id_creada in salas:
-            print(f"El creador de la sala {sala_id_creada} ({sid}) se desconectó.")
-            del salas[sala_id_creada]
-            sio.emit('sala_cerrada_inactividad', {'mensaje': 'El creador de la sala se desconectó.'}, room=sala_id_creada)
-    for sala_id, data in list(salas.items()):
-        if sid in data['sids']:
-            print(f"El cliente {sid} se desconectó de la sala {sala_id}")
-            data['jugadores'] = [jug for i, jug in enumerate(data['jugadores']) if data['sids'][i] != sid]
-            data['sids'].remove(sid)
-            data['listo'] = [s for s in data['listo'] if s != sid]
-            if not data['jugadores']:
-                del salas[sala_id]
-                print(f"Sala {sala_id} eliminada por falta de jugadores.")
-            else:
-                sio.emit('jugador_desconectado', {'sid': sid}, room=sala_id)
-            break
 
 @sio.event
 def actualizar_puntajes(sid, data):
     sala_id = data.get('sala_id')
-    if sala_id in salas:
-        sio.emit('actualizar_puntajes', {
+    puntaje_jugador = data.get('puntaje_jugador')
+
+    if not sala_id or not puntaje_jugador:
+        return
+
+    puntaje_obj = puntajes_por_sala.get(sala_id)
+    if not puntaje_obj:
+        return
+
+    for nombre, categorias in puntaje_jugador.items():
+        for categoria, puntos in categorias.items():
+            try:
+                puntaje_obj.registrar_puntos(nombre, categoria, puntos)
+            except ValueError as e:
+                logging.warning(f"Registro inválido de puntaje: {e}")
+                return
+
+    sio.emit('limpiar_interfaz', {'sala_id': sala_id}, room=sala_id)
+    sio.emit('actualizar_puntajes', {
+        'sala_id': sala_id,
+        'puntajes': puntaje_obj.obtener_puntajes()
+    }, room=sala_id)
+
+    cambiar_turno(sid, sala_id)
+
+
+def cambiar_turno(sid, sala_id):
+    sala = salas[sala_id]
+    try:
+        indice_actual = sala['sids'].index(sid)
+        indice_siguiente = (indice_actual + 1) % len(sala['sids'])
+        siguiente_jugador_sid = sala['sids'][indice_siguiente]
+        siguiente_jugador_nombre = sala['jugadores'][indice_siguiente].obtener_nombre()
+
+        sio.emit('cambio_de_turno', {
             'sala_id': sala_id,
-            'puntajes': data['puntajes']
+            'jugador_actual': siguiente_jugador_sid,
+            'jugador_actual_nombre': siguiente_jugador_nombre,
+            'es_tu_turno': False
         }, room=sala_id)
+
+    except ValueError:
+        logging.error(f"SID {sid} no encontrado en la sala {sala_id} al cambiar turno.")
+
+def cerrar_sala_por_inactividad(sala_id):
+    sleep(tiempo_de_espera_conexion_oponente)
+    if sala_id in salas and not salas[sala_id]['jugadores'][1:]:
+        creador_sid = salas[sala_id]['creador_sid']
+        if creador_sid in clientes_con_sala_creada and clientes_con_sala_creada[creador_sid] == sala_id:
+            del clientes_con_sala_creada[creador_sid]
+        sio.emit('sala_cerrada_inactividad', {'mensaje': 'Sala cerrada, no se unió ningún oponente.'}, room=creador_sid)
+        del salas[sala_id]
+
 
 if __name__ == '__main__':
     app = socketio.WSGIApp(sio)
     import eventlet
-
-    print(f"\nServidor iniciado en http://127.0.0.1:5000 (Tiempo de espera para salas: {tiempo_de_espera_conexion_oponente} segundos)\n")
     eventlet.wsgi.server(eventlet.listen(('127.0.0.1', 5000)), app)
