@@ -46,6 +46,7 @@ class MainApp(QObject):
         self.controlador_juego.actualizar_tiradas_restantes.connect(self.ventana_juego.actualizar_mensaje_tiradas_agotadas)
         self.controlador_juego.mostrar_resultados_lanzamiento.connect(self.ventana_juego.actualizar_dados_lanzados, Qt.QueuedConnection)
         self.controlador_juego.habilitar_categorias.connect(self.ventana_juego.habilitar_categorias)
+        self.controlador_juego.jugador_desconectado.connect(self.volver_a_pantalla_conexion_por_desconexion_del_oponente)
 
         self.controlador_salas.mostrar_juego.connect(self.mostrar_ventana_juego, Qt.QueuedConnection)
         self.controlador_salas.conexion_exitosa.connect(self.on_conexion_exitosa, Qt.QueuedConnection)
@@ -106,6 +107,11 @@ class MainApp(QObject):
         self.controlador_juego.iniciar_partida(jugadores, self.controlador_salas.nombre_jugador_actual, sala_id=sala_id, primer_jugador=primer_jugador)
 
         self.ventana_juego.show()
+
+    def volver_a_pantalla_conexion_por_desconexion_del_oponente(self, mensaje: str):
+        self.ventana_juego.hide()
+        self.ventana_conexion.show()
+        self.ui_conexion.area_mensajes.setText(mensaje)
 
 
 if __name__ == "__main__":

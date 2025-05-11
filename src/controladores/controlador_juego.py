@@ -18,6 +18,7 @@ class ControladorJuego(QObject):
     habilitar_categorias = Signal()
     deshabilitar_categorias = Signal()
     cambio_turno_signal = Signal(object)
+    jugador_desconectado = Signal(str)
 
     def __init__(self):
         super().__init__()
@@ -46,6 +47,12 @@ class ControladorJuego(QObject):
         self.jugador_sid_local = sid
 
     def _setup_handlers(self):
+
+        @self.cliente.on('jugador_desconectado')
+        def on_jugador_desconectado(data):
+            mensaje = data.get("mensaje", "Fin del juego: un jugador ha abandonado la partida.")
+            self.jugador_desconectado.emit(mensaje)
+
         @self.cliente.event
         def cambio_de_turno(data):
             try:

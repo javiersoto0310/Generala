@@ -16,6 +16,17 @@ tiempo_de_espera_conexion_oponente = 30
 def connect(sid, environ):
     print(f"\nCliente conectado: {sid}\n")
 
+@sio.event
+def disconnect(sid):
+    for sala_id, datos in salas.items():
+        if sid in datos['sids']:
+            index = datos['sids'].index(sid)
+            nombre = datos['jugadores'][index].obtener_nombre() if index < len(datos['jugadores']) else "Un jugador"
+
+            oponentes = [s for s in datos['sids'] if s != sid]
+            for op in oponentes:
+                sio.emit('jugador_desconectado', {'mensaje': f"Fin del juego: {nombre} ha abandonado la partida."}, room=op)
+            break
 
 @sio.event
 def crear_sala(sid, data):
