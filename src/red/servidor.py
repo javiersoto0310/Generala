@@ -150,6 +150,25 @@ def actualizar_puntajes(sid, data):
 
     cambiar_turno(sid, sala_id)
 
+@sio.event
+def verificar_fin_juego(sid, data):
+    sala_id = data.get('sala_id')
+    if sala_id not in puntajes_por_sala:
+        return
+
+    puntaje_obj = puntajes_por_sala[sala_id]
+    if puntaje_obj.juego_finalizado():
+        ganador = puntaje_obj.determinar_ganador()
+        puntajes = puntaje_obj.obtener_puntajes()
+        puntajes_totales = {
+            jugador: puntaje_obj.obtener_puntaje_total(jugador)
+            for jugador in puntajes
+        }
+        sio.emit('juego_finalizado', {
+            'ganador': ganador,
+            'puntajes': puntajes_totales
+        }, room=sala_id)
+
 
 def cambiar_turno(sid, sala_id):
     sala = salas[sala_id]

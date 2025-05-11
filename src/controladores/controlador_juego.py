@@ -117,6 +117,14 @@ class ControladorJuego(QObject):
             disponibles = data.get("categorias_disponibles", [])
             self.recibir_resultados_lanzamiento(jugador_sid, resultados, tiradas, disponibles)
 
+        @self.cliente.on('juego_finalizado')
+        def on_juego_finalizado(data):
+            ganador = data.get('ganador')
+            puntajes = data.get('puntajes')
+            if self.vista:
+                self.vista.mostrar_ganador(ganador, puntajes)
+            self.deshabilitar_lanzamiento.emit()
+
     def _reiniciar_turno(self, jugador: str, es_mi_turno: bool):
         self.turno.reiniciar_turno(jugador)
         self.indice_jugador_actual = next(
@@ -279,4 +287,11 @@ class ControladorJuego(QObject):
                 }
             })
 
+        self.verificar_fin_de_juego()
         return puntos
+
+    def verificar_fin_de_juego(self):
+        if self.cliente:
+            self.cliente.emit('verificar_fin_juego', {
+                'sala_id': self.sala_id_actual
+            })

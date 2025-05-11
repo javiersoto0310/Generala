@@ -1,13 +1,15 @@
 import logging
 logging.basicConfig(level=logging.INFO)
 
-from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QMainWindow, QPushButton, QLabel, QTableWidgetItem, QAbstractItemView, QHeaderView, QTableWidget
+from PySide6.QtCore import Qt, Signal
+from PySide6.QtWidgets import QMainWindow, QPushButton, QLabel, QTableWidgetItem, QAbstractItemView, QHeaderView, QTableWidget, QMessageBox
 from vista.pantalla_juego import PantallaJuego
 from vista.estilo_pantalla_juego import Estilo
 
 
 class JuegoVentana(QMainWindow, PantallaJuego):
+    mostrar_ganador_signal = Signal(str, dict)
+
     def __init__(self, controlador=None):
         super().__init__()
         super().setupUi(self)
@@ -17,6 +19,19 @@ class JuegoVentana(QMainWindow, PantallaJuego):
         self._elementos_basicos_ui()
         self._componentes()
         self._inicializacion_del_estado_del_juego()
+        self.mostrar_ganador_signal.connect(self._mostrar_dialogo_ganador)
+
+    def _mostrar_dialogo_ganador(self, ganador, puntajes):
+        mensaje = "Resultado final:\n\n"
+        for jugador, puntos in puntajes.items():
+            mensaje += f"{jugador}: {puntos} puntos\n"
+
+        if ganador:
+            mensaje += f"\n Ganador: {ganador}"
+        else:
+            mensaje += "\n  ¡Empate!"
+
+        QMessageBox.information(self, "Fin del Juego", mensaje)
 
     def _elementos_basicos_ui(self):
         for tirada in [self.tirada1, self.tirada2, self.tirada3]:
@@ -31,7 +46,7 @@ class JuegoVentana(QMainWindow, PantallaJuego):
         self.tabla_puntajes = self.findChild(QTableWidget, 'tabla_puntajes')
 
         if not self.label_jugador_actual:
-            logging.error("Error: QLabel 'jugador_actual' no encontrado")
+            logging.error("QLabel 'jugador_actual' no encontrado")
 
         if self.lanzar_dados_btn:
             self.lanzar_dados_btn.setEnabled(False)
@@ -184,7 +199,7 @@ class JuegoVentana(QMainWindow, PantallaJuego):
         self.generala_doble.clicked.connect(lambda: self.seleccionar_categoria("Doble Generala"))
 
     def seleccionar_categoria(self, categoria: str):
-        if not (self.controlador and hasattr(self.controlador, 'tirada_realizada')) or not self.controlador.tirada_realizada:
+        if not (self.controlador and hasattr(self.controlador,'tirada_realizada')) or not self.controlador.tirada_realizada:
             logging.warning(f"Intento de seleccionar categoría {categoria} antes de la primera tirada.")
             return
 
@@ -207,12 +222,21 @@ class JuegoVentana(QMainWindow, PantallaJuego):
                 categoria=categoria
             )
             logging.info(f"Puntos calculados para {categoria}: {puntos}")
-            self.controlador.pasar_turno()
+
+            if not self.ha_terminado_juego(self.controlador.jugador_actual.obtener_nombre()):
+                self.controlador.pasar_turno()
 
         except Exception as e:
             logging.error(f"Error al seleccionar categoría {categoria}: {str(e)}", exc_info=True)
             self.deshabilitar_boton_lanzar()
             self.deshabilitar_categorias()
+
+    def ha_terminado_juego(self, jugador_nombre: str) -> bool:
+        categorias = [
+            "1", "2", "3", "4", "5", "6",
+            "Escalera", "Full", "Póker", "Generala", "Doble Generala"
+        ]
+        return all(self.ha_marcado_categoria(jugador_nombre, cat) for cat in categorias)
 
     def actualizar_tabla_puntajes(self, puntajes: dict):
         try:
@@ -385,6 +409,12 @@ class JuegoVentana(QMainWindow, PantallaJuego):
 
         for nombre, boton in mapeo.items():
             boton.setEnabled(nombre in disponibles)
+
+    def mostrar_ganador(self, ganador, puntajes: dict):
+        self.mostrar_ganador_signal.emit(ganador, puntajes)
+
+
+
 
 
 
