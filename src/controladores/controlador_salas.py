@@ -5,6 +5,7 @@ import logging
 
 logging.basicConfig(level=logging.INFO)
 
+
 class ControladorSalas(QObject):
     mostrar_juego = Signal(str, list, str)
     error = Signal(str)
@@ -49,8 +50,6 @@ class ControladorSalas(QObject):
         def lista_salas(data):
             if isinstance(data, list):
                 self.mostrar_salas.emit(data)
-            else:
-                self.error.emit("Error al recibir la lista de salas")
 
         @self.cliente.event
         def ya_tiene_sala(data):
@@ -65,7 +64,6 @@ class ControladorSalas(QObject):
         @self.cliente.event
         def esperar_inicio(data):
             if 'sala_id' in data:
-                logging.info(f"Esperando inicio en la sala: {data['sala_id']}")
                 self.cliente.emit('cliente_listo', {'sala_id': data['sala_id']})
 
         @self.cliente.event
@@ -84,18 +82,11 @@ class ControladorSalas(QObject):
 
         @self.cliente.event
         def iniciar_juego(data):
-            logging.info(f"Evento 'iniciar_juego' recibido para la sala: {data.get('sala_id')}")
             if 'sala_id' in data and 'jugadores' in data and 'primer_jugador' in data:
-                sala_id = data['sala_id']
-                jugadores = data['jugadores']
-                primer_jugador = data['primer_jugador']
-                self.mostrar_juego.emit(sala_id, jugadores,primer_jugador)
-            else:
-                logging.warning(f"Evento 'iniciar_juego' recibido con datos incompletos: {data}")
+                self.mostrar_juego.emit(data['sala_id'], data['jugadores'], data['primer_jugador'])
 
         @self.cliente.event
         def resultados_lanzamiento(data):
-            logging.info(f"Resultados de lanzamiento recibidos: {data}")
             if 'resultados' in data and self.controlador_juego:
                 self.controlador_juego.recibir_resultados_lanzamiento(
                     data['jugador_sid'],
@@ -107,13 +98,16 @@ class ControladorSalas(QObject):
         if not self.cliente.connected:
             self.error.emit("No hay conexión con el servidor")
             return
+
         nombre = nombre.strip()
         if not nombre:
             self.error.emit("Debe ingresar un nombre válido")
             return
+
         if len(nombre) > 15:
             self.error.emit("Nombre muy largo (máx. 15 caracteres)")
             return
+
         try:
             self.nombre_jugador_actual = nombre
             self.cliente.emit('crear_sala', {'nombre': nombre})

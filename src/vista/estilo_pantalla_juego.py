@@ -1,5 +1,4 @@
 import logging
-
 from PySide6.QtGui import QPixmap
 from PySide6.QtCore import Qt
 
@@ -58,20 +57,16 @@ class Estilo:
             tiradas_realizadas = 3 - tiradas_restantes
 
             for i, label in enumerate([self.ventana_juego.tirada1,
-                                       self.ventana_juego.tirada2,
-                                       self.ventana_juego.tirada3], start=1):
+                                     self.ventana_juego.tirada2,
+                                     self.ventana_juego.tirada3], start=1):
                 if not label:
-                    print(f"Error: Label tirada{i} no existe!")
                     continue
 
                 if i <= tiradas_realizadas:
                     img_path = f"recursos/img/tirada{i}.png"
                     pixmap = QPixmap(img_path)
 
-                    if pixmap.isNull():
-                        print(f"Error: No se pudo cargar {img_path}")
-                        label.setText(f"Tirada {i}")
-                    else:
+                    if not pixmap.isNull():
                         label.setPixmap(pixmap.scaled(
                             label.size(),
                             Qt.KeepAspectRatio,

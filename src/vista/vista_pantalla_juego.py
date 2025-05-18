@@ -1,6 +1,6 @@
 import logging
-logging.basicConfig(level=logging.INFO)
 
+from PySide6.QtCore import QTimer
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import QMainWindow, QPushButton, QLabel, QTableWidgetItem, QAbstractItemView, QHeaderView, QTableWidget, QMessageBox
 from vista.pantalla_juego import PantallaJuego
@@ -105,26 +105,13 @@ class JuegoVentana(QMainWindow, PantallaJuego):
             logging.warning("Botón lanzar no encontrado al intentar deshabilitar.")
 
     def actualizar_jugador_actual(self, nombre_jugador: str):
-        if not hasattr(self, 'label_jugador_actual'):
-            logging.error("El QLabel no existe")
+        if not hasattr(self, 'label_jugador_actual') or self.label_jugador_actual is None:
+            logging.error("QLabel 'jugador_actual' no encontrado o es None")
             return
 
-        if self.label_jugador_actual is None:
-            logging.error("label_jugador_actual es None")
-            return
-
-        try:
-            nuevo_nombre_jugador = f"Turno de: {nombre_jugador}"
-            self.label_jugador_actual.setText(nuevo_nombre_jugador)
-
-            if self.label_jugador_actual.text() != nuevo_nombre_jugador:
-                logging.error("El nombre del jugador no se actualizó correctamente")
-            else:
-                logging.info(f"Nombre del jugador actualizado correctamente a: '{nuevo_nombre_jugador}'")
-
-        except Exception as e:
-            logging.error(f"Error al actualizar label: {str(e)}")
-            return
+        nuevo_nombre_jugador = f"Turno de: {nombre_jugador}"
+        self.label_jugador_actual.setText(nuevo_nombre_jugador)
+        logging.info(f"Nombre del jugador actualizado a: '{nuevo_nombre_jugador}'")
 
         if self.controlador and hasattr(self.controlador, 'jugador_actual'):
             try:
@@ -163,8 +150,6 @@ class JuegoVentana(QMainWindow, PantallaJuego):
             self.label_jugador_actual.setText(f"Turno de: {jugador_sid}")
             self.deshabilitar_boton_lanzar()
             logging.info(f"Mostrando resultados del jugador {jugador_sid}, botón lanzar deshabilitado.")
-
-        logging.info(f"Dados actualizados para jugador {jugador_sid}: {resultados}")
 
     def habilitar_categorias(self):
         if self.controlador and self.controlador.jugador_actual:
@@ -245,7 +230,6 @@ class JuegoVentana(QMainWindow, PantallaJuego):
                 "Escalera": 6, "Full": 7, "Póker": 8,
                 "Generala": 9, "Doble Generala": 10
             }
-            logging.debug(f"Actualizando tabla de puntajes: {puntajes}")
 
             if not hasattr(self, 'tabla_puntajes') or self.tabla_puntajes is None:
                 logging.error("Error: tabla_puntajes no inicializada")
@@ -296,7 +280,6 @@ class JuegoVentana(QMainWindow, PantallaJuego):
                 item = self.tabla_puntajes.item(fila, columna)
                 if item and item.text().isdigit():
                     total += int(item.text())
-            logging.debug(f"Puntuación parcial para la columna {columna}: {total}")
 
             total_item = QTableWidgetItem(str(total))
             total_item.setTextAlignment(Qt.AlignCenter)
@@ -399,6 +382,24 @@ class JuegoVentana(QMainWindow, PantallaJuego):
             self.Tiradas_agotadas_label.setText("")
         self.estilo.resetear_estilos_dados()
 
+    def reiniciar_interfaz_juego(self):
+        self.limpiar_interfaz_turno()
+
+        if hasattr(self, 'tabla_puntajes') and self.tabla_puntajes:
+            self.tabla_puntajes.clearContents()
+
+        if hasattr(self, 'Tiradas_agotadas_label'):
+            self.Tiradas_agotadas_label.setText("")
+
+        if hasattr(self, 'label_jugador_actual'):
+            self.label_jugador_actual.setText("Esperando turno...")
+
+        self.deshabilitar_boton_lanzar()
+        self.deshabilitar_categorias()
+        self.estilo.limpiar_dados()
+        self.estilo.limpiar_tiradas()
+        self.estilo.resetear_estilos_dados()
+
     def habilitar_categorias_disponibles(self, disponibles: list):
         mapeo = {
             "1": self.uno, "2": self.dos, "3": self.tres, "4": self.cuatro,
@@ -413,8 +414,34 @@ class JuegoVentana(QMainWindow, PantallaJuego):
     def mostrar_ganador(self, ganador, puntajes: dict):
         self.mostrar_ganador_signal.emit(ganador, puntajes)
 
+    def closeEvent(self, event):
+        dialogo = QMessageBox(self)
+        dialogo.setWindowTitle("Confirmar salida")
+        dialogo.setText("¿Deseas abandonar la partida?\nSe cerrará automáticamente en 10 segundos.")
+        boton_si = dialogo.addButton("Sí", QMessageBox.AcceptRole)
+        boton_no = dialogo.addButton("No", QMessageBox.RejectRole)
+        dialogo.setDefaultButton(boton_no)
 
+        temporizador = QTimer(self)
+        temporizador.setInterval(10000)
+        temporizador.setSingleShot(True)
+        temporizador.timeout.connect(lambda: dialogo.done(0))
+        temporizador.start()
 
+        respuesta = dialogo.exec()
+
+        if respuesta == 0:
+            if self.controlador.cliente:
+                self.controlador.cliente.disconnect()
+            event.accept()
+
+        elif dialogo.clickedButton() == boton_si:
+            if self.controlador.cliente:
+                self.controlador.cliente.disconnect()
+            event.accept()
+
+        else:
+            event.ignore()
 
 
 
