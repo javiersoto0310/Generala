@@ -27,10 +27,13 @@ class Puntaje:
 
     def registrar_puntos(self, nombre_jugador: str, categoria: str, puntos: int) -> None:
         self.__validar_registro_puntos(nombre_jugador, categoria)
+
+        if categoria == "Doble Generala" and "Generala" not in self._categorias_usadas[nombre_jugador]:
+            puntos = 0
+
         self._puntajes[nombre_jugador][categoria] = puntos
         self._categorias_usadas[nombre_jugador].add(categoria)
         self._jugadores[nombre_jugador].actualizar_puntaje(puntos)
-        logging.debug(f"Puntos registrados - Jugador: {nombre_jugador}, Categoría: {categoria}, Puntos: {puntos}")
 
     def obtener_puntajes(self) -> Dict[str, Dict[str, int]]:
         return self._puntajes.copy()
