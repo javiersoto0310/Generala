@@ -1,6 +1,3 @@
-import logging
-logging.basicConfig(level=logging.INFO)
-
 from PySide6.QtCore import QObject, Signal
 from typing import List, Optional
 from modelo.jugador import Jugador
@@ -8,7 +5,9 @@ from modelo.turno import Turno
 from modelo.dado import Dado
 from modelo.categoria import Categoria
 import socketio
+import logging
 
+logging.basicConfig(level=logging.INFO)
 
 class ControladorJuego(QObject):
     habilitar_lanzamiento = Signal()
@@ -47,7 +46,6 @@ class ControladorJuego(QObject):
         self.jugador_sid_local = sid
 
     def _setup_handlers(self):
-
         @self.cliente.on('jugador_desconectado')
         def on_jugador_desconectado(data):
             mensaje = data.get("mensaje", "Fin del juego: un jugador ha abandonado la partida.")
@@ -91,10 +89,10 @@ class ControladorJuego(QObject):
                 })
 
             except (TypeError, AttributeError) as error:
-                print(f"Error al procesar 'cambio_de_turno': {error}")
+                logging.error(f"Error en cambio_de_turno: {error}")
                 self.deshabilitar_lanzamiento.emit()
             except Exception as error:
-                print(f"Error en 'cambio_de_turno': {error}")
+                logging.error(f"Error inesperado en cambio_de_turno: {error}")
                 self.deshabilitar_lanzamiento.emit()
 
         @self.cliente.on('limpiar_interfaz')
@@ -110,10 +108,9 @@ class ControladorJuego(QObject):
             if not isinstance(data, dict):
                 return
 
-            sala_id = data.get('sala_id')
             puntajes = data.get('puntajes')
 
-            if sala_id == self.sala_id_actual and self.vista:
+            if self.vista:
                 self.vista.actualizar_tabla_puntajes(puntajes)
 
         @self.cliente.on('resultados_lanzamiento')

@@ -24,6 +24,33 @@ class TestPuntaje:
         with pytest.raises(ValueError, match="Categoría 1 ya fue utilizada por Jugador1"):
             puntaje.registrar_puntos("Jugador1", "1", 3)
 
+    def test_marcar_doble_generala_sin_tener_generala(self):
+        puntaje = Puntaje(["Jugador1"])
+
+        puntaje.registrar_puntos("Jugador1", "Doble Generala", 100)
+
+        assert puntaje.obtener_puntajes()["Jugador1"]["Doble Generala"] == 0
+        assert puntaje.obtener_puntaje_total("Jugador1") == 0
+        assert "Doble Generala" in puntaje._categorias_usadas["Jugador1"]
+
+    def test_marcar_doble_generala_con_generala(self):
+        puntaje = Puntaje(["Jugador1"])
+
+        puntaje.registrar_puntos("Jugador1", "Generala", 50)
+        puntaje.registrar_puntos("Jugador1", "Doble Generala", 100)
+
+        assert puntaje.obtener_puntajes()["Jugador1"]["Generala"] == 50
+        assert puntaje.obtener_puntajes()["Jugador1"]["Doble Generala"] == 100
+        assert puntaje.obtener_puntaje_total("Jugador1") == 150
+
+    def test_marcar_generala_normal(self):
+        puntaje = Puntaje(["Jugador1"])
+        puntaje.registrar_puntos("Jugador1", "Generala", 50)
+
+        assert puntaje.obtener_puntajes()["Jugador1"]["Generala"] == 50
+        assert puntaje.obtener_puntaje_total("Jugador1") == 50
+        assert "Generala" in puntaje._categorias_usadas["Jugador1"]
+
     def test_categorias_disponibles(self):
         puntaje = Puntaje(["Jugador1"])
         assert len(puntaje.obtener_categorias_disponibles("Jugador1")) == 11

@@ -99,10 +99,11 @@ class MainApp(QObject):
         )
 
     def mostrar_ventana_juego(self, sala_id: str, jugadores: List[str], primer_jugador: str):
-        logging.info(f"Mostrando pantalla de juego para la sala: {sala_id} con jugadores: {jugadores}")
+        logging.info(f"Mostrando pantalla de juego para la sala: {sala_id}")
         self.ventana_conexion.hide()
 
         self.ventana_juego.setWindowTitle(f"Generala - Sala: {sala_id} - Jugador: {self.controlador_salas.nombre_jugador_actual}")
+        self.ventana_juego.reiniciar_interfaz_juego()
         self.ventana_juego.configurar_tabla_puntajes(jugadores)
         self.controlador_juego.iniciar_partida(jugadores, self.controlador_salas.nombre_jugador_actual, sala_id=sala_id, primer_jugador=primer_jugador)
 
@@ -112,6 +113,7 @@ class MainApp(QObject):
         self.ventana_juego.hide()
         self.ventana_conexion.show()
         self.ui_conexion.area_mensajes.setText(mensaje)
+        self.ui_conexion.lista_salas_disponibles.clear()
 
 
 if __name__ == "__main__":
