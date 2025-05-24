@@ -18,6 +18,7 @@ class ControladorJuego(QObject):
     deshabilitar_categorias = Signal()
     cambio_turno_signal = Signal(object)
     jugador_desconectado = Signal(str)
+    actualizar_tiempo_restante = Signal(str)  # nueva señal
 
     def __init__(self):
         super().__init__()
@@ -41,6 +42,7 @@ class ControladorJuego(QObject):
 
     def set_vista(self, vista):
         self.vista = vista
+        self.actualizar_tiempo_restante.connect(self.vista.actualizar_tiempo_restante)
 
     def set_jugador_sid_local(self, sid: str):
         self.jugador_sid_local = sid
@@ -129,6 +131,19 @@ class ControladorJuego(QObject):
                 self.vista.mostrar_ganador(ganador, puntajes)
             self.deshabilitar_lanzamiento.emit()
 
+        @self.cliente.on('cronometro_actualizado')
+        def on_cronometro_actualizado(data):
+            if not isinstance(data, dict):
+                return
+            tiempo_restante = data.get('tiempo_restante')
+            if tiempo_restante is not None:
+                self.actualizar_tiempo_restante.emit(f"Tiempo: {tiempo_restante}s")
+
+        @self.cliente.on('turno_agotado')
+        def on_turno_agotado(data):
+            if data.get('sala_id') == self.sala_id_actual:
+                self.pasar_turno()
+
     def _reiniciar_turno(self, jugador: str, es_mi_turno: bool):
         self.turno.reiniciar_turno(jugador)
         self.indice_jugador_actual = next(
@@ -168,8 +183,6 @@ class ControladorJuego(QObject):
         self.tiradas_restantes = 3
         self.dados_actuales = [None] * 5
         self.actualizar_tiradas_restantes.emit(self.tiradas_restantes)
-        if hasattr(self, 'vista') and self.vista.estilo:
-            self.vista.estilo.limpiar_tiradas()
 
     def iniciar_turno(self):
         self._resetear_estado_turno()
@@ -229,14 +242,11 @@ class ControladorJuego(QObject):
     def recibir_resultados_lanzamiento(self, jugador_sid, resultados, tiradas_restantes=None, categorias_disponibles=None):
         self.mostrar_resultados_lanzamiento.emit(jugador_sid, resultados)
 
-        if jugador_sid != self.jugador_actual.obtener_nombre():
-            self.dados_actuales = resultados
-            self.actualizar_tiradas_restantes.emit(tiradas_restantes or 0)
-        else:
-            self.dados_actuales = resultados
-            self.actualizar_tiradas_restantes.emit(tiradas_restantes or 0)
-            if categorias_disponibles and self.vista:
-                self.vista.habilitar_categorias_disponibles(categorias_disponibles)
+        self.dados_actuales = resultados
+        self.actualizar_tiradas_restantes.emit(tiradas_restantes or 0)
+
+        if categorias_disponibles and self.vista:
+            self.vista.habilitar_categorias_disponibles(categorias_disponibles)
 
     def _ha_marcado_categoria(self, categoria: str) -> bool:
         if not hasattr(self, 'vista') or not self.vista:
@@ -260,13 +270,6 @@ class ControladorJuego(QObject):
         self._resetear_estado_turno()
         self.indice_jugador_actual = nuevo_indice
         self.turno.reiniciar_turno(nombre_nuevo_jugador)
-
-        if self.cliente:
-            self.cliente.emit('cambio_turno', {
-                'sala_id': self.sala_id_actual,
-                'jugador_actual_sid': self.jugador_sid_local
-            })
-
         self.cambio_turno_signal.emit({
             'jugador_nombre': nombre_nuevo_jugador,
             'es_mi_turno': (nombre_nuevo_jugador == self.jugador_actual.obtener_nombre()),
@@ -299,3 +302,25 @@ class ControladorJuego(QObject):
             self.cliente.emit('verificar_fin_juego', {
                 'sala_id': self.sala_id_actual
             })
+
+    def turno_agotado(self):
+        if not self.jugador_actual:
+            return
+
+        jugador_nombre = self.jugador_actual.obtener_nombre()
+        disponibles = self.obtener_categorias_disponibles()
+
+        if disponibles:
+            categoria_auto = disponibles[0]
+            if self.cliente:
+                self.cliente.emit('actualizar_puntajes', {
+                    'sala_id': self.sala_id_actual,
+                    'puntaje_jugador': {
+                        jugador_nombre: {
+                            categoria_auto: 0
+                        }
+                    }
+                })
+
+        self.verificar_fin_de_juego()
+        self.pasar_turno()

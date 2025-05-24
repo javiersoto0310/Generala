@@ -5,7 +5,6 @@ import logging
 
 logging.basicConfig(level=logging.INFO)
 
-
 class ControladorSalas(QObject):
     mostrar_juego = Signal(str, list, str)
     error = Signal(str)
