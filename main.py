@@ -38,6 +38,7 @@ class MainApp(QObject):
 
         self.ventana_juego = JuegoVentana(self.controlador_juego)
         self.controlador_juego.set_vista(self.ventana_juego)
+        self.ventana_juego.volver_a_conexion.connect(self.volver_a_pantalla_conexion_post_partida)
         self.ventana_juego.lanzar_dados_btn.clicked.connect(self.controlador_juego.lanzar_dados)
         self.controlador_juego.cambio_turno_signal.connect(self.ventana_juego.manejar_cambio_turno)
         self.controlador_juego.habilitar_lanzamiento.connect(self.ventana_juego.habilitar_boton_lanzar, Qt.QueuedConnection)
@@ -115,6 +116,20 @@ class MainApp(QObject):
         self.ui_conexion.area_mensajes.setText(mensaje)
         self.ui_conexion.lista_salas_disponibles.clear()
 
+    def volver_a_pantalla_conexion_post_partida(self):
+        if self.controlador_juego.sala_id_actual:
+            self.controlador_juego.cliente.emit("abandonar_sala", {
+                "sala_id": self.controlador_juego.sala_id_actual
+            })
+
+        self.ventana_juego.hide()
+        self.ventana_conexion.show()
+        self.ui_conexion.area_mensajes.setText("La partida ha finalizado.")
+        self.ui_conexion.lista_salas_disponibles.clear()
+
 
 if __name__ == "__main__":
     app = MainApp()
+
+    def volver_a_pantalla_conexion_post_partida(self):
+        self.ventana_juego.hide()

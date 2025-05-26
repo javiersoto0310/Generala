@@ -6,7 +6,8 @@ from vista.pantalla_juego import PantallaJuego
 from vista.estilo_pantalla_juego import Estilo
 
 class JuegoVentana(QMainWindow, PantallaJuego):
-    mostrar_ganador_signal = Signal(str, dict)
+    mostrar_ganador_signal = Signal(str, dict, object)
+    volver_a_conexion = Signal()  # nueva señal
 
     def __init__(self, controlador=None):
         super().__init__()
@@ -17,24 +18,29 @@ class JuegoVentana(QMainWindow, PantallaJuego):
         self._elementos_basicos_ui()
         self._componentes()
         self._inicializacion_del_estado_del_juego()
-        self.mostrar_ganador_signal.connect(self._mostrar_dialogo_ganador)
+        self.mostrar_ganador_signal.connect(lambda g, p, m=None: self._mostrar_dialogo_ganador(g, p, m))
 
     def actualizar_tiempo_restante(self, texto_tiempo: str):
         if hasattr(self, 'tiempo_restante') and self.tiempo_restante:
             self.tiempo_restante.setText(texto_tiempo)
             self.tiempo_restante.setStyleSheet("color: black;")
 
-    def _mostrar_dialogo_ganador(self, ganador, puntajes):
+    def _mostrar_dialogo_ganador(self, ganador, puntajes, motivo=None):
         mensaje = "Resultado final:\n\n"
+
+        if motivo:
+            mensaje = motivo + "\n\n" + mensaje
+
         for jugador, puntos in puntajes.items():
             mensaje += f"{jugador}: {puntos} puntos\n"
 
         if ganador:
             mensaje += f"\n Ganador: {ganador}"
         else:
-            mensaje += "\n  ¡Empate!"
+            mensaje += "\n ¡Empate!"
 
         QMessageBox.information(self, "Fin del Juego", mensaje)
+        self.volver_a_conexion.emit()
 
     def _elementos_basicos_ui(self):
         for tirada in [self.tirada1, self.tirada2, self.tirada3]:
@@ -129,6 +135,7 @@ class JuegoVentana(QMainWindow, PantallaJuego):
                 jugador_sid != self.controlador.jugador_actual.obtener_nombre()):
             self.label_jugador_actual.setText(f"Turno de: {jugador_sid}")
             self.deshabilitar_boton_lanzar()
+            self.deshabilitar_categorias()
 
     def habilitar_categorias(self):
         if self.controlador and self.controlador.jugador_actual:
@@ -363,8 +370,8 @@ class JuegoVentana(QMainWindow, PantallaJuego):
         for nombre, boton in mapeo.items():
             boton.setEnabled(nombre in disponibles)
 
-    def mostrar_ganador(self, ganador, puntajes: dict):
-        self.mostrar_ganador_signal.emit(ganador, puntajes)
+    def mostrar_ganador(self, ganador, puntajes: dict, motivo: str = None):
+        self.mostrar_ganador_signal.emit(ganador, puntajes, motivo)
 
     def closeEvent(self, event):
         segundos_restantes = 10

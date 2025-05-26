@@ -127,8 +127,9 @@ class ControladorJuego(QObject):
         def on_juego_finalizado(data):
             ganador = data.get('ganador')
             puntajes = data.get('puntajes')
+            motivo = data.get('motivo')
             if self.vista:
-                self.vista.mostrar_ganador(ganador, puntajes)
+                self.vista.mostrar_ganador(ganador, puntajes, motivo)
             self.deshabilitar_lanzamiento.emit()
 
         @self.cliente.on('cronometro_actualizado')
@@ -245,7 +246,9 @@ class ControladorJuego(QObject):
         self.dados_actuales = resultados
         self.actualizar_tiradas_restantes.emit(tiradas_restantes or 0)
 
-        if categorias_disponibles and self.vista:
+        if (categorias_disponibles and self.vista and
+                hasattr(self, 'jugador_actual') and
+                jugador_sid == self.jugador_actual.obtener_nombre()):
             self.vista.habilitar_categorias_disponibles(categorias_disponibles)
 
     def _ha_marcado_categoria(self, categoria: str) -> bool:

@@ -19,6 +19,7 @@ salas = defaultdict(lambda: {
 })
 clientes_con_sala_creada = {}
 puntajes_por_sala = {}
+inacciones_por_jugador = defaultdict(lambda: defaultdict(int))
 tiempo_de_espera_conexion_oponente = 30
 tiempo_turno = 30
 
@@ -54,21 +55,32 @@ def disconnect(sid):
 
                     detener_temporizador(sala_id)
                     del salas[sala_id]
+
                     if sala_id in puntajes_por_sala:
                         del puntajes_por_sala[sala_id]
+
                     if oponente_sid in clientes_con_sala_creada:
                         del clientes_con_sala_creada[oponente_sid]
+
+                    if sala_id in inacciones_por_jugador:
+                        del inacciones_por_jugador[sala_id]
+
                 else:
                     detener_temporizador(sala_id)
                     del salas[sala_id]
+
                     if sala_id in puntajes_por_sala:
                         del puntajes_por_sala[sala_id]
+
+                    if sala_id in inacciones_por_jugador:
+                        del inacciones_por_jugador[sala_id]
 
                 logging.info(f"{nombre} desconectado y sala {sala_id} limpiada.")
 
             except Exception as e:
                 logging.error(f"Error al limpiar estado en disconnect: {e}")
             break
+
 
 @sio.event
 def crear_sala(sid, data):
@@ -145,6 +157,36 @@ def unirse_a_sala(sid, data):
     sio.emit('sala_unida', {'sala_id': sala_id}, room=sid)
 
 @sio.event
+def abandonar_sala(sid, data):
+    sala_id = data.get("sala_id")
+    if not sala_id or sala_id not in salas:
+        return
+
+    if sid in salas[sala_id]['sids']:
+        index = salas[sala_id]['sids'].index(sid)
+        nombre = salas[sala_id]['jugadores'][index].obtener_nombre()
+
+        salas[sala_id]['sids'].pop(index)
+        salas[sala_id]['jugadores'].pop(index)
+        if sid in salas[sala_id]['listo']:
+            salas[sala_id]['listo'].remove(sid)
+
+        if salas[sala_id]['creador_sid'] == sid:
+            salas[sala_id]['creador_sid'] = None
+
+        if sid in clientes_con_sala_creada:
+            del clientes_con_sala_creada[sid]
+
+        if not salas[sala_id]['sids']:
+            if sala_id in puntajes_por_sala:
+                del puntajes_por_sala[sala_id]
+            if sala_id in inacciones_por_jugador:
+                del inacciones_por_jugador[sala_id]
+            del salas[sala_id]
+
+        logging.info(f"{nombre} abandonó/finalizó la sala {sala_id}.")
+
+@sio.event
 def lanzar_dados(sid, data):
     sala_id = data.get('sala_id')
     resultados = data.get('resultados')
@@ -214,6 +256,7 @@ def verificar_fin_juego(sid, data):
             'ganador': ganador,
             'puntajes': puntajes_totales
         }, room=sala_id)
+        detener_temporizador(sala_id)
 
 
 def cambiar_turno(sid, sala_id):
@@ -299,11 +342,48 @@ def manejar_tiempo_agotado(sala_id):
     sio.emit('turno_agotado', {'sala_id': sala_id}, room=sala_id)
 
     if sala_id in salas:
+        jugador_actual_nombre = salas[sala_id]['jugador_actual']
         jugador_actual_idx = next((i for i, jugador in enumerate(salas[sala_id]['jugadores'])
-                                   if jugador.obtener_nombre() == salas[sala_id]['jugador_actual']), None)
+                                   if jugador.obtener_nombre() == jugador_actual_nombre), None)
 
-        if jugador_actual_idx is not None:
-            cambiar_turno(salas[sala_id]['sids'][jugador_actual_idx], sala_id)
+        if jugador_actual_idx is None:
+            return
+
+        controlador_puntaje = puntajes_por_sala.get(sala_id)
+        if not controlador_puntaje:
+            return
+
+        categorias = controlador_puntaje.obtener_categorias_disponibles(jugador_actual_nombre)
+        if categorias:
+            orden_inverso = list(reversed(Puntaje.categorias_ordenadas))
+            for categoria in orden_inverso:
+                if categoria in categorias:
+                    controlador_puntaje.registrar_puntos(jugador_actual_nombre, categoria, 0)
+                    break
+
+            sio.emit('actualizar_puntajes', {
+                'sala_id': sala_id,
+                'puntajes': controlador_puntaje.obtener_puntajes()
+            }, room=sala_id)
+
+            inacciones_por_jugador[sala_id][jugador_actual_nombre] += 1
+
+            if inacciones_por_jugador[sala_id][jugador_actual_nombre] >= 3:
+                jugadores = [j.obtener_nombre() for j in salas[sala_id]['jugadores']]
+                oponente = next(j for j in jugadores if j != jugador_actual_nombre)
+                puntajes_totales = {
+                    jugador: controlador_puntaje.obtener_puntaje_total(jugador)
+                    for jugador in jugadores
+                }
+                sio.emit('juego_finalizado', {
+                    'ganador': oponente,
+                    'puntajes': puntajes_totales,
+                    'motivo': f"La partida fue finalizada por inactividad de {jugador_actual_nombre}."
+                }, room=sala_id)
+
+                return
+
+        cambiar_turno(salas[sala_id]['sids'][jugador_actual_idx], sala_id)
 
 
 def detener_temporizador(sala_id):
