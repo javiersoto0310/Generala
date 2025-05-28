@@ -18,7 +18,7 @@ class ControladorJuego(QObject):
     deshabilitar_categorias = Signal()
     cambio_turno_signal = Signal(object)
     jugador_desconectado = Signal(str)
-    actualizar_tiempo_restante = Signal(str)  # nueva señal
+    actualizar_tiempo_restante = Signal(str)
 
     def __init__(self):
         super().__init__()
@@ -138,7 +138,7 @@ class ControladorJuego(QObject):
                 return
             tiempo_restante = data.get('tiempo_restante')
             if tiempo_restante is not None:
-                self.actualizar_tiempo_restante.emit(f"Tiempo: {tiempo_restante}s")
+                self.actualizar_tiempo_restante.emit(f"Tiempo: {tiempo_restante}")
 
         @self.cliente.on('turno_agotado')
         def on_turno_agotado(data):
