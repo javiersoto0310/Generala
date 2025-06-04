@@ -7,11 +7,11 @@
     <x>0</x>
     <y>0</y>
     <width>408</width>
-    <height>331</height>
+    <height>363</height>
    </rect>
   </property>
   <property name="windowTitle">
-   <string>Conexión en red</string>
+   <string>Generala</string>
   </property>
   <widget class="QWidget" name="centralwidget">
    <layout class="QVBoxLayout" name="verticalLayout">
@@ -46,13 +46,6 @@
      <widget class="QPushButton" name="btn_listar_salas">
       <property name="text">
        <string>Listar Salas Disponibles</string>
-      </property>
-     </widget>
-    </item>
-    <item>
-     <widget class="QPushButton" name="btn_ranking">
-      <property name="text">
-       <string>Ranking</string>
       </property>
      </widget>
     </item>

@@ -7,7 +7,7 @@ from vista.estilo_pantalla_juego import Estilo
 
 class JuegoVentana(QMainWindow, PantallaJuego):
     mostrar_ganador_signal = Signal(str, dict, object)
-    volver_a_conexion = Signal()  # nueva señal
+    volver_a_conexion = Signal()
 
     def __init__(self, controlador=None):
         super().__init__()

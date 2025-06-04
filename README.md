@@ -59,7 +59,7 @@ Una vez que tengas las terminales abiertas, sigue estos pasos:
 1.  **Clonar el repositorio desde GitHub:**
     * Usa el siguiente comando para descargar el código del juego:
         ```bash
-        git clone [https://github.com/javiersoto0310/Generala.git](https://github.com/javiersoto0310/Generala.git)
+        git clone -b desarrollo https://github.com/javiersoto0310/Generala.git
         ```
     * Una vez que se complete la descarga, navega a la carpeta del proyecto usando el comando:
         ```bash

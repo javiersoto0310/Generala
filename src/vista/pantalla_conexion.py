@@ -23,7 +23,7 @@ class Conexion(object):
     def setupUi(self, MainWindow):
         if not MainWindow.objectName():
             MainWindow.setObjectName(u"MainWindow")
-        MainWindow.resize(408, 331)
+        MainWindow.resize(408, 363)
         self.centralwidget = QWidget(MainWindow)
         self.centralwidget.setObjectName(u"centralwidget")
         self.verticalLayout = QVBoxLayout(self.centralwidget)
@@ -58,11 +58,6 @@ class Conexion(object):
 
         self.verticalLayout.addWidget(self.btn_listar_salas)
 
-        self.btn_ranking = QPushButton(self.centralwidget)
-        self.btn_ranking.setObjectName(u"btn_ranking")
-
-        self.verticalLayout.addWidget(self.btn_ranking)
-
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QMenuBar(MainWindow)
         self.menubar.setObjectName(u"menubar")
@@ -78,11 +73,10 @@ class Conexion(object):
     # setupUi
 
     def retranslateUi(self, MainWindow):
-        MainWindow.setWindowTitle(QCoreApplication.translate("MainWindow", u"Conexi\u00f3n en red", None))
+        MainWindow.setWindowTitle(QCoreApplication.translate("MainWindow", u"Generala", None))
         self.entrada_nombre.setPlaceholderText(QCoreApplication.translate("MainWindow", u"Ingrese su nombre", None))
         self.btn_crear_sala.setText(QCoreApplication.translate("MainWindow", u"Crear Sala", None))
         self.btn_unirse_a_sala.setText(QCoreApplication.translate("MainWindow", u"Unirse a Sala", None))
         self.btn_listar_salas.setText(QCoreApplication.translate("MainWindow", u"Listar Salas Disponibles", None))
-        self.btn_ranking.setText(QCoreApplication.translate("MainWindow", u"Ranking", None))
     # retranslateUi
 

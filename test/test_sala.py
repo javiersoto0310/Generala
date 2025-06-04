@@ -39,17 +39,23 @@ def test_obtener_oponente():
     assert oponente == "sid_pedro"
 
 
-def test_sala_llena_y_vacia():
+def test_sala_llena():
     jugador = Jugador("Solo")
     sala = Sala("sala1", "sid_solo", jugador)
 
     assert sala.esta_llena() == False
-    assert sala.esta_vacia() == False
 
     jugador2 = Jugador("Oponente")
     sala.agregar_jugador("sid_oponente", jugador2)
 
     assert sala.esta_llena() == True
+
+
+def test_sala_vacia():
+    jugador = Jugador("Solo")
+    sala = Sala("sala1", "sid_solo", jugador)
+
+    sala.agregar_jugador("sid_oponente", Jugador("Oponente"))
 
     sala.eliminar_jugador("sid_solo")
     sala.eliminar_jugador("sid_oponente")

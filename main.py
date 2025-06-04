@@ -130,6 +130,3 @@ class MainApp(QObject):
 
 if __name__ == "__main__":
     app = MainApp()
-
-    def volver_a_pantalla_conexion_post_partida(self):
-        self.ventana_juego.hide()
