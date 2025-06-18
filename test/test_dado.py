@@ -1,4 +1,4 @@
-from src.modelo.dado import Dado
+from modelos.modelo_juego.dado import Dado
 
 def test_lanzar_dado():
     dado = Dado()

@@ -3,29 +3,36 @@ from uuid import uuid4
 from eventlet import wsgi, sleep
 import socketio
 
-from modelo.jugador import Jugador
-from modelo.puntaje import Puntaje
-from modelo.sala import Sala
+from modelos.modelo_juego.jugador import Jugador
+from modelos.modelo_juego.puntaje import Puntaje
+from modelos.modelo_sala.sala import Sala
+
+logging.basicConfig(level=logging.INFO)
 
 sio = socketio.Server(cors_allowed_origins='*')
 salas = {}
 clientes_con_sala_creada = {}
-
+clientes = {}
 
 @sio.event
 def connect(sid, environ):
-    logging.info(f"Cliente conectado: {sid}")
-
+    nombre = "Desconocido"
+    clientes[sid] = nombre
+    logging.info(f"Cliente conectado: {sid} - Nombre: {nombre}")
 
 @sio.event
 def disconnect(sid):
+    nombre = clientes.get(sid, "Desconocido")
+    logging.info(f"Cliente desconectado: {sid} ({nombre})")
+    clientes.pop(sid, None)
+
     for sala_id, sala in list(salas.items()):
         if sid in sala.sids:
             try:
                 jugador = sala.obtener_jugador_por_sid(sid)
                 nombre = jugador.obtener_nombre() if jugador else "Jugador"
 
-                sala.eliminar_jugador(sid)
+                sala.eliminar_jugador_por_sid(sid)
 
                 if sala.creador_sid == sid:
                     sala.creador_sid = None
@@ -43,10 +50,14 @@ def disconnect(sid):
                         }, room=oponente_sid)
 
                         sala.temporizador.detener()
-                        del salas[sala_id]
+
+                        if sala.creador_sid and sala.creador_sid in clientes_con_sala_creada:
+                            del clientes_con_sala_creada[sala.creador_sid]
 
                         if oponente_sid in clientes_con_sala_creada:
                             del clientes_con_sala_creada[oponente_sid]
+
+                        del salas[sala_id]
 
                 logging.info(f"{nombre} desconectado y sala {sala_id} limpiada.")
 
@@ -54,10 +65,11 @@ def disconnect(sid):
                 logging.error(f"Error al limpiar estado en disconnect: {e}")
             break
 
-
 @sio.event
 def crear_sala(sid, data):
     nombre = data.get('nombre', 'Anónimo')
+    clientes[sid] = nombre
+    logging.info(f"Cliente {sid} asignado como {nombre}")
 
     if sid in clientes_con_sala_creada:
         sala_id = clientes_con_sala_creada[sid]
@@ -78,6 +90,9 @@ def crear_sala(sid, data):
 
     sio.start_background_task(cerrar_sala_por_inactividad, sala_id)
 
+    logging.info(f"Estado actual - Salas: {salas}")
+    logging.info(f"Clientes con sala creada: {clientes_con_sala_creada}")
+    logging.info(f"Clientes conectados: {clientes}")
 
 @sio.event
 def listar_salas(sid):
@@ -98,11 +113,17 @@ def listar_salas(sid):
             })
     sio.emit('lista_salas', lista_salas, room=sid)
 
+    #logging.info(f"Estado actual - Salas: {salas}")
+    #logging.info(f"Clientes con sala creada: {clientes_con_sala_creada}")
+    #logging.info(f"Clientes conectados: {clientes}")
+
 
 @sio.event
 def unirse_a_sala(sid, data):
     sala_id = data.get('sala_id')
     nombre = data.get('nombre', 'Anónimo')
+    clientes[sid] = nombre
+    logging.info(f"Cliente {sid} asignado como {nombre}")
 
     if sala_id not in salas:
         sio.emit('error', {'mensaje': 'La sala no existe'}, room=sid)
@@ -115,7 +136,7 @@ def unirse_a_sala(sid, data):
         return
 
     jugador = Jugador(nombre)
-    sala.agregar_jugador(sid, jugador)
+    sala.agregar_jugador_y_sid(sid, jugador)
     sio.enter_room(sid, sala_id)
 
     if sala.esta_llena():
@@ -135,6 +156,10 @@ def unirse_a_sala(sid, data):
 
     sio.emit('sala_unida', {'sala_id': sala_id}, room=sid)
 
+    #logging.info(f"Estado actual - Salas: {salas}")
+    #logging.info(f"Clientes con sala creada: {clientes_con_sala_creada}")
+    #logging.info(f"Clientes conectados: {clientes}")
+
 
 @sio.event
 def abandonar_sala_por_abandono_o_juego_finalizado(sid, data):
@@ -143,7 +168,7 @@ def abandonar_sala_por_abandono_o_juego_finalizado(sid, data):
         return
 
     sala = salas[sala_id]
-    sala.eliminar_jugador(sid)
+    sala.eliminar_jugador_por_sid(sid)
 
     if sala.creador_sid == sid:
         sala.creador_sid = None
@@ -151,11 +176,14 @@ def abandonar_sala_por_abandono_o_juego_finalizado(sid, data):
     if sid in clientes_con_sala_creada:
         del clientes_con_sala_creada[sid]
 
+    oponente_sid = sala.obtener_oponente_sid(sid)
+    if oponente_sid and oponente_sid in clientes_con_sala_creada:
+        del clientes_con_sala_creada[oponente_sid]
+
     if sala.esta_vacia():
         del salas[sala_id]
 
     logging.info(f"Jugador abandonó/finalizó la sala {sala_id}.")
-
 
 @sio.event
 def lanzar_dados(sid, data):
@@ -223,18 +251,29 @@ def verificar_fin_juego(sid, data):
     controlador_puntaje = sala.puntaje
 
     if controlador_puntaje and controlador_puntaje.juego_finalizado():
-        ganador = controlador_puntaje.determinar_ganador()
+        ganador, es_empate = controlador_puntaje.determinar_ganador_o_empate()
         puntajes = controlador_puntaje.obtener_puntajes()
         puntajes_totales = {
             jugador: controlador_puntaje.obtener_puntaje_total(jugador)
             for jugador in puntajes
         }
+
+        if es_empate:
+            max_puntos = max(puntajes_totales.values())
+            motivo = f"¡Partida empatada con {max_puntos} puntos!\n\nResultado final:\n"
+            for jugador, puntos in puntajes_totales.items():
+                motivo += f"{jugador}: {puntos} puntos\n"
+        else:
+            motivo = f"¡Ganador: {ganador}!\n\nResultado final:\n"
+            for jugador, puntos in puntajes_totales.items():
+                motivo += f"{jugador}: {puntos} puntos\n"
+
         sio.emit('juego_finalizado', {
             'ganador': ganador,
-            'puntajes': puntajes_totales
+            'puntajes': puntajes_totales,
+            'motivo': motivo
         }, room=sala_id)
         sala.temporizador.detener()
-
 
 def cerrar_sala_por_inactividad(sala_id):
     sleep(30)
@@ -252,3 +291,4 @@ if __name__ == '__main__':
     app = socketio.WSGIApp(sio)
     import eventlet
     eventlet.wsgi.server(eventlet.listen(('127.0.0.1', 5000)), app)
+

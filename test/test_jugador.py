@@ -1,4 +1,4 @@
-from src.modelo.jugador import Jugador
+from modelos.modelo_juego.jugador import Jugador
 
 def test_obtener_nombre():
     jugador = Jugador("Javier")

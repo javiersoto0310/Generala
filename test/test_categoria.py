@@ -1,4 +1,4 @@
-from src.modelo.categoria import Categoria
+from modelos.modelo_juego.categoria import Categoria
 
 def test_verificar_escalera_baja():
     categoria = Categoria()
@@ -16,34 +16,34 @@ def test_calcular_puntos_categoria_numerica():
     puntos = categoria.calcular_puntos_categoria_numerica(dados, 2)
     assert puntos == 6
 
-def test_calcular_puntos_escalera():
+def test_verificar_escalera():
     categoria = Categoria()
     dados = [1, 2, 3, 4, 5]
-    puntos = categoria.calcular_puntos_categoria_especial(dados, "Escalera")
+    puntos = categoria.evaluar_puntos_categoria_especial(dados, "Escalera")
     assert puntos == 20
 
-def test_calcular_puntos_full():
+def test_verificar_convinacion_de_dados_full():
     categoria = Categoria()
     dados = [2, 2, 3, 3, 3]
-    puntos = categoria.calcular_puntos_categoria_especial(dados, "Full")
+    puntos = categoria.evaluar_puntos_categoria_especial(dados, "Full")
     assert puntos == 30
 
-def test_calcular_puntos_poker():
+def test_verificar_convinacion_de_dados_poker():
     categoria = Categoria()
     dados = [4, 4, 4, 4, 5]
-    puntos = categoria.calcular_puntos_categoria_especial(dados, "Póker")
+    puntos = categoria.evaluar_puntos_categoria_especial(dados, "Póker")
     assert puntos == 40
 
-def test_calcular_puntos_generala():
+def test_verificar_generala():
     categoria = Categoria()
     dados = [6, 6, 6, 6, 6]
-    puntos = categoria.calcular_puntos_categoria_especial(dados, "Generala")
+    puntos = categoria.evaluar_puntos_categoria_especial(dados, "Generala")
     assert puntos == 50
 
-def test_calcular_puntos_doble_generala():
+def test_verificar_doble_generala():
     categoria = Categoria()
     dados = [5, 5, 5, 5, 5]
-    puntos = categoria.calcular_puntos_categoria_especial(dados, "Doble Generala", ha_marcado_generala=True)
+    puntos = categoria.evaluar_puntos_categoria_especial(dados, "Doble Generala", ha_marcado_generala=True)
     assert puntos == 100
 
 

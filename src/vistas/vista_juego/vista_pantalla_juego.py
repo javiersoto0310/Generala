@@ -2,8 +2,8 @@ import logging
 
 from PySide6.QtCore import Qt, Signal, QTimer
 from PySide6.QtWidgets import QMainWindow, QPushButton, QLabel, QTableWidgetItem, QAbstractItemView, QHeaderView, QTableWidget, QMessageBox
-from vista.pantalla_juego import PantallaJuego
-from vista.estilo_pantalla_juego import Estilo
+from vistas.vista_juego.pantalla_juego import PantallaJuego
+from vistas.vista_juego.estilo_pantalla_juego import Estilo
 
 class JuegoVentana(QMainWindow, PantallaJuego):
     mostrar_ganador_signal = Signal(str, dict, object)
@@ -26,18 +26,17 @@ class JuegoVentana(QMainWindow, PantallaJuego):
             self.tiempo_restante.setStyleSheet("color: black;")
 
     def _mostrar_dialogo_ganador(self, ganador, puntajes, motivo=None):
-        mensaje = "Resultado final:\n\n"
-
         if motivo:
-            mensaje = motivo + "\n\n" + mensaje
-
-        for jugador, puntos in puntajes.items():
-            mensaje += f"{jugador}: {puntos} puntos\n"
-
-        if ganador:
-            mensaje += f"\n Ganador: {ganador}"
+            mensaje = motivo
         else:
-            mensaje += "\n ¡Empate!"
+            mensaje = "Resultado final:\n\n"
+            for jugador, puntos in puntajes.items():
+                mensaje += f"{jugador}: {puntos} puntos\n"
+
+            if ganador:
+                mensaje += f"\n¡Ganador: {ganador}!"
+            else:
+                mensaje += "\n¡Partida empatada!"
 
         QMessageBox.information(self, "Fin del Juego", mensaje)
         self.volver_a_conexion.emit()
@@ -370,7 +369,7 @@ class JuegoVentana(QMainWindow, PantallaJuego):
         for nombre, boton in mapeo.items():
             boton.setEnabled(nombre in disponibles)
 
-    def mostrar_ganador(self, ganador, puntajes: dict, motivo: str = None):
+    def mostrar_resultado_final_del_juego(self, ganador, puntajes: dict, motivo: str = None):
         self.mostrar_ganador_signal.emit(ganador, puntajes, motivo)
 
     def closeEvent(self, event):

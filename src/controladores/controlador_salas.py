@@ -1,5 +1,5 @@
 from PySide6.QtCore import QObject, Signal
-from src.red.conexion_thread import SocketIOThread
+from red.conexion_inicial import SocketIOThread
 import socketio
 import logging
 

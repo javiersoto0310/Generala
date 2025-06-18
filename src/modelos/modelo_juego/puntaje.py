@@ -1,5 +1,5 @@
 from typing import Dict, List
-from modelo.jugador import Jugador
+from modelos.modelo_juego.jugador import Jugador
 import logging
 
 logging.basicConfig(level=logging.INFO)
@@ -14,10 +14,7 @@ class Puntaje:
         self._jugadores = {nombre: Jugador(nombre) for nombre in nombres_jugadores}
         self._puntajes = {nombre: {} for nombre in nombres_jugadores}
         self._categorias_usadas = {nombre: set() for nombre in nombres_jugadores}
-        self.cliente = None
 
-    def set_cliente(self, cliente):
-        self.cliente = cliente
 
     def __validar_registro_puntos(self, nombre_jugador: str, categoria: str) -> None:
         if nombre_jugador not in self._jugadores:
@@ -45,22 +42,23 @@ class Puntaje:
         return categoria in self._categorias_usadas[nombre_jugador]
 
     def obtener_categorias_disponibles(self, nombre_jugador: str) -> List[str]:
-        return [cat for cat in self.categorias_ordenadas if not self.ha_usado_categoria(nombre_jugador, cat)]
+        return [categoria for categoria in self.categorias_ordenadas if not self.ha_usado_categoria(nombre_jugador, categoria)]
 
-    def determinar_ganador(self) -> str:
-        return max(self._jugadores.values(), key=lambda j: j.obtener_puntaje()).obtener_nombre()
+    def determinar_ganador_o_empate(self) -> tuple:
+        jugadores = list(self._jugadores.values())
+        if not jugadores:
+            return None, False
 
-    def cargar_estado(self, estado: Dict[str, Dict[str, int]]) -> None:
-        self._puntajes = estado
-        self._categorias_usadas = {
-            jugador: set(puntajes.keys())
-            for jugador, puntajes in estado.items()
-        }
-        for nombre, jugador in self._jugadores.items():
-            jugador.actualizar_puntaje(sum(estado[nombre].values()))
+        max_puntaje = max(j.obtener_puntaje() for j in jugadores)
+        ganadores = [jugador for jugador in jugadores if jugador.obtener_puntaje() == max_puntaje]
+
+        if len(ganadores) > 1:
+            return None, True
+        else:
+            return ganadores[0].obtener_nombre(), False
 
     def juego_finalizado(self) -> bool:
-        return all(len(cats) == len(self.categorias_ordenadas)
-                   for cats in self._categorias_usadas.values())
+        return all(len(categorias_usadas_por_jugador) == len(self.categorias_ordenadas)
+                   for categorias_usadas_por_jugador in self._categorias_usadas.values())
 
 

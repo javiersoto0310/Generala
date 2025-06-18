@@ -1,4 +1,4 @@
-from src.modelo.turno import Turno
+from modelos.modelo_juego.turno import Turno
 
 def test_obtener_turno_jugador_actual():
     turno = Turno("Javier")

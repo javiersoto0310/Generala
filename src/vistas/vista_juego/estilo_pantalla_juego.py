@@ -1,6 +1,8 @@
 import logging
-from PySide6.QtGui import QPixmap
+from PySide6.QtGui import QPixmap, QPalette
 from PySide6.QtCore import Qt
+from PySide6.QtWidgets import QFrame
+
 
 class Estilo:
     def __init__(self, ventana_juego):
@@ -12,9 +14,15 @@ class Estilo:
             self.ventana_juego.dado4,
             self.ventana_juego.dado5,
         ]
+        self.base_palette = QPalette()
         self.configurar_tamano_dados()
         self.configurar_tamano_tiradas()
         self.dado_imagenes = self.cargar_rutas_imagenes()
+        self.actualizar_paleta_base()
+
+    def actualizar_paleta_base(self):
+        if self.ventana_juego:
+            self.base_palette = self.ventana_juego.palette()
 
     def configurar_tamano_dados(self):
         for lbl in self.dados_labels:
@@ -79,9 +87,27 @@ class Estilo:
             logging.error(f"Error en actualizar_imagen_tirada: {str(e)}")
 
     def aplicar_estilo_seleccionado(self, indice_dado, seleccionado):
-        estilo = "border: 2px solid #A0A0A0;" if seleccionado else "border: none;"
         if indice_dado < len(self.dados_labels) and self.dados_labels[indice_dado]:
-            self.dados_labels[indice_dado].setStyleSheet(estilo)
+            label = self.dados_labels[indice_dado]
+            if seleccionado:
+                label.setFrameShape(QFrame.Box)
+                label.setLineWidth(2)
+
+                label.setStyleSheet("QFrame { border: 2px solid red; }")
+            else:
+                label.setStyleSheet("")
+                label.setFrameShape(QFrame.NoFrame)
+
+    def resetear_estilo_dado(self, label):
+        if label:
+            label.setFrameShape(QFrame.NoFrame)
+            label.setLineWidth(0)
+            label.setPalette(self.base_palette)
+            label.setProperty("bloqueado", False)
+
+    def resetear_estilos_dados(self):
+        for lbl in self.dados_labels:
+            self.resetear_estilo_dado(lbl)
 
     def limpiar_dados(self):
         for lbl in self.dados_labels:
@@ -89,14 +115,9 @@ class Estilo:
                 lbl.clear()
                 lbl.setStyleSheet("")
 
-    def resetear_estilos_dados(self):
-        for lbl in self.dados_labels:
-            if lbl:
-                lbl.setStyleSheet("")
-                lbl.setProperty("bloqueado", False)
-
     def limpiar_tiradas(self):
         if self.ventana_juego:
             self.ventana_juego.tirada1.clear()
             self.ventana_juego.tirada2.clear()
             self.ventana_juego.tirada3.clear()
+

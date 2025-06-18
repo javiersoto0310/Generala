@@ -1,9 +1,9 @@
 from PySide6.QtCore import QObject, Signal
 from typing import List, Optional
-from modelo.jugador import Jugador
-from modelo.turno import Turno
-from modelo.dado import Dado
-from modelo.categoria import Categoria
+from modelos.modelo_juego.jugador import Jugador
+from modelos.modelo_juego.turno import Turno
+from modelos.modelo_juego.dado import Dado
+from modelos.modelo_juego.categoria import Categoria
 import socketio
 import logging
 
@@ -129,7 +129,7 @@ class ControladorJuego(QObject):
             puntajes = data.get('puntajes')
             motivo = data.get('motivo')
             if self.vista:
-                self.vista.mostrar_ganador(ganador, puntajes, motivo)
+                self.vista.mostrar_resultado_final_del_juego(ganador, puntajes, motivo)
             self.deshabilitar_lanzamiento.emit()
 
         @self.cliente.on('cronometro_actualizado')
@@ -231,7 +231,7 @@ class ControladorJuego(QObject):
 
         jugador_nombre = self.jugador_actual.obtener_nombre()
 
-        if hasattr(self, 'vista') and self.vista:
+        if hasattr(self, 'vistas') and self.vista:
             categorias = [
                 "1", "2", "3", "4", "5", "6",
                 "Escalera", "Full", "Póker", "Generala", "Doble Generala"
@@ -252,7 +252,7 @@ class ControladorJuego(QObject):
             self.vista.habilitar_categorias_disponibles(categorias_disponibles)
 
     def _ha_marcado_categoria(self, categoria: str) -> bool:
-        if not hasattr(self, 'vista') or not self.vista:
+        if not hasattr(self, 'vistas') or not self.vista:
             return False
         return self.vista.ha_marcado_categoria(
             self.jugador_actual.obtener_nombre(),
@@ -281,7 +281,7 @@ class ControladorJuego(QObject):
         })
 
     def calcular_puntos_para_categoria(self, dados: list, categoria: str) -> int:
-        puntos = self.categoria.calcular_puntos(
+        puntos = self.categoria.determinar_puntuacion_para_una_categoria_especial_o_numerica(
             dados=[d for d in dados if d is not None],
             categoria=categoria,
             ha_marcado_generala=self._ha_marcado_categoria("Generala")

@@ -1,5 +1,5 @@
-from modelo.sala import Sala
-from modelo.jugador import Jugador
+from modelos.modelo_sala.sala import Sala
+from modelos.modelo_juego.jugador import Jugador
 
 
 def test_crear_sala():
@@ -16,12 +16,12 @@ def test_agregar_y_eliminar_jugador():
     sala = Sala("sala1", "sid_carlos", jugador1)
 
     jugador2 = Jugador("Luisa")
-    sala.agregar_jugador("sid_luisa", jugador2)
+    sala.agregar_jugador_y_sid("sid_luisa", jugador2)
 
     assert len(sala.jugadores) == 2
     assert sala.jugadores[1].obtener_nombre() == "Luisa"
 
-    sala.eliminar_jugador("sid_luisa")
+    sala.eliminar_jugador_por_sid("sid_luisa")
     assert len(sala.jugadores) == 1
     assert sala.jugadores[0].obtener_nombre() == "Carlos"
 
@@ -30,7 +30,7 @@ def test_obtener_oponente():
     jugador1 = Jugador("Pedro")
     jugador2 = Jugador("Maria")
     sala = Sala("sala1", "sid_pedro", jugador1)
-    sala.agregar_jugador("sid_maria", jugador2)
+    sala.agregar_jugador_y_sid("sid_maria", jugador2)
 
     oponente = sala.obtener_oponente_sid("sid_pedro")
     assert oponente == "sid_maria"
@@ -46,7 +46,7 @@ def test_sala_llena():
     assert sala.esta_llena() == False
 
     jugador2 = Jugador("Oponente")
-    sala.agregar_jugador("sid_oponente", jugador2)
+    sala.agregar_jugador_y_sid("sid_oponente", jugador2)
 
     assert sala.esta_llena() == True
 
@@ -55,17 +55,17 @@ def test_sala_vacia():
     jugador = Jugador("Solo")
     sala = Sala("sala1", "sid_solo", jugador)
 
-    sala.agregar_jugador("sid_oponente", Jugador("Oponente"))
+    sala.agregar_jugador_y_sid("sid_oponente", Jugador("Oponente"))
 
-    sala.eliminar_jugador("sid_solo")
-    sala.eliminar_jugador("sid_oponente")
+    sala.eliminar_jugador_por_sid("sid_solo")
+    sala.eliminar_jugador_por_sid("sid_oponente")
 
     assert sala.esta_vacia() == True
 
 
 def test_nombres_jugadores():
     sala = Sala("sala1", "sid1", Jugador("Juan"))
-    sala.agregar_jugador("sid2", Jugador("Laura"))
+    sala.agregar_jugador_y_sid("sid2", Jugador("Laura"))
 
     nombres = sala.nombres_de_jugadores()
     assert "Juan" in nombres

@@ -5,10 +5,11 @@ from typing import Optional, List
 from PySide6.QtWidgets import QApplication, QMainWindow, QListWidgetItem
 from PySide6.QtCore import QObject, Qt
 
-from src.vista.pantalla_conexion import Conexion
-from src.controladores.controlador_salas import ControladorSalas
-from src.controladores.controlador_juego import ControladorJuego
-from src.vista.vista_pantalla_juego import JuegoVentana
+from vistas.vista_sala.pantalla_conexion import Conexion
+from vistas.vista_juego.vista_pantalla_juego import JuegoVentana
+from controladores.controlador_salas import ControladorSalas
+from controladores.controlador_juego import ControladorJuego
+
 
 
 class MainApp(QObject):
@@ -103,7 +104,7 @@ class MainApp(QObject):
         logging.info(f"Mostrando pantalla de juego para la sala: {sala_id}")
         self.ventana_conexion.hide()
 
-        self.ventana_juego.setWindowTitle(f"Generala - Sala: {sala_id} - Jugador: {self.controlador_salas.nombre_jugador_actual}")
+        self.ventana_juego.setWindowTitle(f"Jugador: {self.controlador_salas.nombre_jugador_actual}")
         self.ventana_juego.reiniciar_interfaz_juego()
         self.ventana_juego.configurar_tabla_puntajes(jugadores)
         self.controlador_juego.iniciar_partida(jugadores, self.controlador_salas.nombre_jugador_actual, sala_id=sala_id, primer_jugador=primer_jugador)
@@ -118,7 +119,7 @@ class MainApp(QObject):
 
     def volver_a_pantalla_conexion_post_partida(self):
         if self.controlador_juego.sala_id_actual:
-            self.controlador_juego.cliente.emit("abandonar_sala", {
+            self.controlador_juego.cliente.emit("abandonar_sala_por_abandono_o_juego_finalizado", {
                 "sala_id": self.controlador_juego.sala_id_actual
             })
 

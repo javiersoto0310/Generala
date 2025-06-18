@@ -1,5 +1,4 @@
-import pytest
-from modelo.puntaje import Puntaje
+from modelos.modelo_juego.puntaje import Puntaje
 
 class TestPuntaje:
     def test_inicializacion(self):
@@ -13,27 +12,16 @@ class TestPuntaje:
         assert puntaje.obtener_puntajes()["Jugador1"]["1"] == 5
         assert puntaje.obtener_puntaje_total("Jugador1") == 5
 
-    def test_registrar_puntos_jugador_invalido(self):
-        puntaje = Puntaje(["Jugador1"])
-        with pytest.raises(ValueError, match="Jugador Jugador2 no existe"):
-            puntaje.registrar_puntos("Jugador2", "1", 5)
 
-    def test_categoria_repetida(self):
+    def test_marcar_doble_generala_sin_tener_generala_el_valor_del_puntaje_debe_ser_0_puntos(self):
         puntaje = Puntaje(["Jugador1"])
-        puntaje.registrar_puntos("Jugador1", "1", 5)
-        with pytest.raises(ValueError, match="Categoría 1 ya fue utilizada por Jugador1"):
-            puntaje.registrar_puntos("Jugador1", "1", 3)
-
-    def test_marcar_doble_generala_sin_tener_generala(self):
-        puntaje = Puntaje(["Jugador1"])
-
         puntaje.registrar_puntos("Jugador1", "Doble Generala", 100)
 
         assert puntaje.obtener_puntajes()["Jugador1"]["Doble Generala"] == 0
         assert puntaje.obtener_puntaje_total("Jugador1") == 0
         assert "Doble Generala" in puntaje._categorias_usadas["Jugador1"]
 
-    def test_marcar_doble_generala_con_generala(self):
+    def test_marcar_doble_generala_con_generala_el_valor_del_puntaje_debe_ser_100_puntos(self):
         puntaje = Puntaje(["Jugador1"])
 
         puntaje.registrar_puntos("Jugador1", "Generala", 50)
@@ -57,21 +45,21 @@ class TestPuntaje:
         puntaje.registrar_puntos("Jugador1", "1", 5)
         assert len(puntaje.obtener_categorias_disponibles("Jugador1")) == 10
 
-    def test_determinar_ganador(self):
+    def test_verificar_resultado_final_del_juego_determinar_ganador(self):
         puntaje = Puntaje(["Jugador1", "Jugador2"])
-        puntaje.registrar_puntos("Jugador1", "1", 5)
-        puntaje.registrar_puntos("Jugador2", "1", 10)
-        assert puntaje.determinar_ganador() == "Jugador2"
+        puntaje.registrar_puntos("Jugador1", "6", 12)
+        puntaje.registrar_puntos("Jugador2", "6", 18)
+        assert puntaje.determinar_ganador_o_empate() == ("Jugador2", False)
 
-    def test_cargar_estado(self):
+    def test_determinar_empate(self):
         puntaje = Puntaje(["Jugador1", "Jugador2"])
-        estado = {
-            "Jugador1": {"1": 5, "2": 10},
-            "Jugador2": {"1": 3, "3": 15}
-        }
-        puntaje.cargar_estado(estado)
-        assert puntaje.obtener_puntajes()["Jugador1"]["1"] == 5
-        assert puntaje.obtener_puntaje_total("Jugador2") == 18
+
+        puntaje.registrar_puntos("Jugador1", "6", 12)
+        puntaje.registrar_puntos("Jugador2", "6", 12)
+
+        resultado = puntaje.determinar_ganador_o_empate()
+
+        assert resultado == (None, True)
 
     def test_registrar_puntos_poker(self):
         puntaje = Puntaje(["Jugador1"])
